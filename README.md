@@ -12,13 +12,15 @@ use and scalability, so an environment that has python 3.6 and jupyter installed
 The `./notebooks/` directory contains the notebooks used to test new parameters and algorithms. 
 The `./gia_forecast/` directory contains runs of training. SafeMaker's Forecast feature?
 
-## Input Parameters to O
+## Input Parameters to Output price distribution
 
 - ~~Stock price~~ 
 - Sentiment value
   - Twitter
   - News articals
   - Reddit
+  - Intense sickness is negative
+  - https://github.com/shirosaidev/stocksight
 - Google Trends
 - Weather?
 - Recessions indicator
@@ -29,6 +31,16 @@ The `./gia_forecast/` directory contains runs of training. SafeMaker's Forecast 
 - Percent of presidential cycle
 - Ask/bid spread
 - Sector based performance
+- DCA
+  - Allow/prefer investing as a DCA function
+  - Only if short term is negative, though long term is positive. This helps ease our way into a position without try to time it perfectly
+  - Bucket Annealing
+    - Each bucket is 100 shares
+    - Buy 50 when max price to pay is hit
+- Inflation rates
+  - https://www.usinflationcalculator.com/inflation/current-inflation-rates/
+- Go through past 5 years of spikes and determine what caused them. Then determine a way to evaluate it
+
 
 ## TODO: Calculate model's confidence
 This can be based of spread of precentiles, RMSE, and other model output.
