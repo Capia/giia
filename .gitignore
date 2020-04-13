@@ -2,3 +2,5 @@ gia_forecast/
 test.csv
 train.csv
 
+.idea/
+*.iml

@@ -1,0 +1,8 @@
+boto3
+jupyter
+matplotlib
+mxnet
+numpy
+pandas
+s3fs
+sagemaker
