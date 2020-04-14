@@ -3,6 +3,7 @@ jupyter
 matplotlib
 mxnet
 numpy
-pandas
+pandas~=1.0.3
 s3fs
 sagemaker
+gluonts~=0.4.2
