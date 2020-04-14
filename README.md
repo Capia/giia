@@ -20,6 +20,10 @@ The provided notebooks require some dependencies to be installed. To install the
 This repo also makes use of AWS Sagemaker's SDK which allows you to test and iterate quickly on your dev machine, before
 running a training session. To enable local execution change the `train_instance_type` of your estimator to `local`.
 
+Lastly, jupyter cell output is distracting when looking at diffs and MRs. To remove this we use a tool called 
+`nbstripout` and git filters. `nbstripout` was already installed with the requirements files and the git filter is 
+already installed via `.gitattributes`
+
 ### Repo Structure
 The `./src/research` directory contains the notebooks used to test new parameters and algorithms.
 The `./src/train` directory contains notebooks and python scripts to train models in AWS.
@@ -69,12 +73,8 @@ A few datasets are provided to test implemented models.
 
 ## Other notes
 
-NEXT:
-Update dataset
-Run training job
-- This will provide some good data on where I should start the hyperparameters before adding more features
-- This will also provide a good baseline for MSE
-Implement next feature
+https://aws.amazon.com/blogs/machine-learning/amazon-sagemaker-automatic-model-tuning-now-supports-random-search-and-hyperparameter-scaling/
+https://docs.aws.amazon.com/sagemaker/latest/dg/automatic-model-tuning-how-it-works.html
 
 ### Future Implementations
 
