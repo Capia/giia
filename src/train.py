@@ -4,16 +4,10 @@ os.system('pip install pandas')
 os.system('pip install gluonts')
 import pandas as pd
 import pathlib
-import gluonts
-import numpy as np
 import argparse
 import json
-from mxnet import gpu, cpu
-from mxnet.context import num_gpus
-from gluonts.dataset.util import to_pandas
 from gluonts.model.deepar import DeepAREstimator
-from gluonts.model.simple_feedforward import SimpleFeedForwardEstimator
-from gluonts.evaluation.backtest import make_evaluation_predictions, backtest_metrics
+from gluonts.evaluation.backtest import make_evaluation_predictions
 from gluonts.evaluation import Evaluator
 from gluonts.model.predictor import Predictor
 from gluonts.dataset.common import ListDataset
@@ -31,13 +25,13 @@ def train(epochs, prediction_length, num_layers, dropout_rate):
     print(df.tail(1))
 
     training_data = ListDataset(
-        [{"start": df.index[0], "target": df['Adj Close'][: "2013-12-01"]}],
-        freq="1M"
+        [{"start": df.index[0], "target": df['Adj Close'][:]}],
+        freq="1d"
     )
 
     # Define DeepAR estimator
     estimator = DeepAREstimator(
-        freq="1M",
+        freq="1d",
         prediction_length=prediction_length,
         dropout_rate=dropout_rate,
         num_layers=num_layers,
@@ -54,8 +48,8 @@ def train(epochs, prediction_length, num_layers, dropout_rate):
     print(df.tail(1))
 
     test_data = ListDataset(
-        [{"start": df.index[0], "target": df['Adj Close'][: "2015-04-15"]}],
-        freq="1M"
+        [{"start": df.index[0], "target": df['Adj Close'][:]}],
+        freq="1d"
     )
 
     # Evaluate trained model on test data
