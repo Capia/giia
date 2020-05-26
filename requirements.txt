@@ -1,11 +1,11 @@
-boto3
+boto3~=1.13.6
 jupyter
 matplotlib
 mxnet
-numpy
+numpy~=1.18.4
 pandas~=1.0.3
 s3fs
-sagemaker
-gluonts~=0.4.2
+sagemaker~=1.57.0
+gluonts~=0.4.3
 
 nbstripout
