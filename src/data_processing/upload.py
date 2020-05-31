@@ -23,8 +23,8 @@ class Upload:
     def upload_to_sagemaker_s3_bucket(self, model_name: str, train_dataset_path: str, test_dataset_path: str):
         self.logger.log("Data will be uploaded to: ", self.s3_bucket)
 
-        s3_train_dataset_path = "s3://{}/{}/train".format(self.s3_bucket, model_name)
-        s3_test_dataset_path = "s3://{}/{}/test".format(self.s3_bucket, model_name)
+        s3_train_dataset_path = f"s3://{self.s3_bucket}/{model_name}/train"
+        s3_test_dataset_path = f"s3://{self.s3_bucket}/{model_name}/test"
 
         self.copy_to_s3(train_dataset_path, s3_train_dataset_path + "/train.csv")
         self.copy_to_s3(test_dataset_path, s3_test_dataset_path + "/test.csv")

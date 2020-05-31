@@ -5,6 +5,8 @@ import numpy as np
 from utils.logging import LoggerUtil
 
 
+# Dataset retrieved from:
+#   https://finance.yahoo.com/quote/%5EGSPC/history?period1=788936400&period2=1564545600&interval=1mo&filter=history&frequency=1mo
 class Parse:
     logger = None
     train_dataset_path = "datasets/train.csv"

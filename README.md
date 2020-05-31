@@ -15,7 +15,7 @@ SageMaker for its robust API and scalability.
 
 ## Getting Started
 
-The provided notebooks require some dependencies to be installed. To install these dependencies run `pip install -r requirements.txt`
+The provided notebooks require some dependencies to be installed. To install these dependencies run `pip install -r ./src/requirements.txt`
 
 This repo also makes use of AWS Sagemaker's SDK which allows you to test and iterate quickly on your dev machine, before
 running a training session. To enable local execution change the `train_instance_type` of your estimator to `local`.
