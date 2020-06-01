@@ -1,13 +1,13 @@
 # Giia
 
-Liia is a backward acronym that stands for:
+Giia is a backward acronym that stands for:
 - A: Artificial
 - I: Intelligence
 -    for
 - I: Investment
 - G: Growth
 
-Giia is a family of financial services owned by Cona Inc. Its goal is to provide predictions for long, medium, and 
+Giia is a family of financial services owned by Capia Inc. Its goal is to provide predictions for long, medium, and 
 short-term outlooks for any given stock. 
 
 This encompasses using MXNet + GluonTS to create an AI model based on time series data. This repo leverages AWS 
@@ -15,12 +15,12 @@ SageMaker for its robust API and scalability.
 
 ## Getting Started
 
-The provided notebooks require some dependencies to be installed. To install these dependencies run `pip install -r requirements.txt`
+The provided notebooks require some dependencies to be installed. To install these dependencies run `pip install -r ./src/requirements.txt`
 
 This repo also makes use of AWS Sagemaker's SDK which allows you to test and iterate quickly on your dev machine, before
 running a training session. To enable local execution change the `train_instance_type` of your estimator to `local`.
 
-Lastly, jupyter cell output is distracting when looking at diffs and MRs. To remove this we use a tool called 
+Lastly, jupyter cell output is distracting when looking at diffs and MRs. To remove this, we use a tool called 
 `nbstripout` and git filters. `nbstripout` was already installed with the requirements files and the git filter is 
 already installed via `.gitattributes`
 
@@ -38,12 +38,14 @@ The `./src/train` directory contains notebooks and python scripts to train model
   - Intense sickness is negative
   - https://github.com/shirosaidev/stocksight
 - Google Trends
+- Foreign markets
+- Futures
 - Weather?
 - Recessions indicator
 - Exponential Moving Average
-- Time of day
-- Day of week
-- Week of year
+- Time of day (GluonTS takes this into account already, double check it though)
+- Day of week (GluonTS takes this into account already, double check it though)
+- Week of year (GluonTS takes this into account already, double check it though)
 - Percent of presidential cycle
 - Ask/bid spread
 - Sector based performance
@@ -56,6 +58,7 @@ The `./src/train` directory contains notebooks and python scripts to train model
 - Inflation rates
   - https://www.usinflationcalculator.com/inflation/current-inflation-rates/
 - Go through past 5 years of spikes and determine what caused them. Then determine a way to evaluate it
+- Earnings (find api for this)
 
 
 ## TODO: Calculate model's confidence
@@ -99,7 +102,7 @@ https://github.com/aws-samples/amazon-sagemaker-time-series-prediction-using-glu
 
 ### Market Viability
 
-While this will largely be used by the founders of Cona, we believe we can market and sell its predictions to other 
+While this will largely be used by the founders of Capia, we believe we can market and sell its predictions to other 
 users. Below are a few ideas to make Giia profitiable:
 1) Sell tokens to a limited number of people (this number should stay below 50). Here are a few different pricing models
   - Cost per request, which is uniquely identified by the token. This works well because it is reoccuring and is 

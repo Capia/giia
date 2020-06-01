@@ -1,6 +1,13 @@
-gia_forecast/
-test.csv
-train.csv
-
+# Intellij
 .idea/
 *.iml
+
+# Notebook logs
+src/*.log
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# Other
+.DS_Store

@@ -1,0 +1,11 @@
+boto3~=1.13.17
+jupyter
+matplotlib
+mxnet
+numpy~=1.18.4
+pandas~=1.0.3
+s3fs
+sagemaker~=1.60.0.post0
+gluonts~=0.5.0
+
+nbstripout
