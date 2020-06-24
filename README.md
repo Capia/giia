@@ -24,10 +24,6 @@ Lastly, jupyter cell output is distracting when looking at diffs and MRs. To rem
 `nbstripout` and git filters. `nbstripout` was already installed with the requirements files and the git filter is 
 already installed via `.gitattributes`
 
-### Repo Structure
-The `./src/research` directory contains the notebooks used to test new parameters and algorithms.
-The `./src/train` directory contains notebooks and python scripts to train models in AWS.
-
 ## Input Parameters to Output price distribution
 
 - ~~Stock price~~ 

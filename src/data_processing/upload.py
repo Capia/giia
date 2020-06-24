@@ -21,6 +21,7 @@ class Upload:
             Upload.s3_bucket_resource = boto3.resource('s3').Bucket(Upload.s3_bucket)
 
     def upload_to_sagemaker_s3_bucket(self, model_name: str, train_dataset_path: str, test_dataset_path: str):
+        # TODO: s3_bucket is None?
         self.logger.log("Data will be uploaded to: ", self.s3_bucket)
 
         s3_train_dataset_path = f"s3://{self.s3_bucket}/{model_name}/train"
