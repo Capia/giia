@@ -1,3 +1,8 @@
+#
+# NOTE: This file must stay at the root of the `./src` directory due to sagemaker local stripping the path from the
+#  entry_point. Follow this issue for new developments https://github.com/aws/sagemaker-python-sdk/issues/1597
+#
+
 import os
 
 import pandas as pd

@@ -1,5 +1,6 @@
 boto3~=1.13.17
 jupyter
+ipython-cache~=0.2.6
 matplotlib
 mxnet
 numpy~=1.18.4
