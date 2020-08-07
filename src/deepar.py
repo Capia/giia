@@ -19,6 +19,8 @@ from gluonts.trainer import Trainer
 
 # Creates a training and testing ListDataset, a DeepAR estimator, and performs the training. It also performs
 # evaluation and prints the MSE metric. This is necessary for the hyperparameter tuning later on.
+
+# TODO: Should use https://gist.github.com/ehsanmok/b2c8fa6dbeea55860049414a16ddb3ff#file-lstnet-py-L41
 def train(epochs, prediction_length, num_layers, dropout_rate):
     # Create train dataset
     df = pd.read_csv(filepath_or_buffer=os.environ['SM_CHANNEL_TRAIN'] + "/train.csv", header=0, index_col=0)
@@ -38,17 +40,16 @@ def train(epochs, prediction_length, num_layers, dropout_rate):
         prediction_length=prediction_length,
         dropout_rate=dropout_rate,
         num_layers=num_layers,
-        trainer=Trainer(epochs=epochs))
+        trainer=Trainer(epochs=epochs),
+        # distr_output=MultivariateGaussianOutput(dim=2)
+    )
 
     # Train the model
     predictor = estimator.train(training_data=training_data)
 
     # Create test dataset
     df = pd.read_csv(filepath_or_buffer=os.environ['SM_CHANNEL_TEST'] + "/test.csv", header=0, index_col=0)
-    print("First test sample:")
-    print(df.head(1))
-    print("\nLast test sample:")
-    print(df.tail(1))
+    df.describe()
 
     test_data = ListDataset(
         [{"start": df.index[0], "target": df['Adj Close'][:]}],

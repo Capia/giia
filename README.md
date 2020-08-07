@@ -26,6 +26,12 @@ already installed via `.gitattributes`
 
 ## Input Parameters to Output price distribution
 
+
+DeepAR
+DeepVAR
+GPVAR
+MultivariateEvaluator
+
 - ~~Stock price~~ 
 - Sentiment value
   - Twitter

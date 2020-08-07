@@ -2,6 +2,7 @@ import os
 
 import pandas as pd
 import numpy as np
+import ntpath
 from utils.logging import LoggerUtil
 
 
@@ -9,8 +10,8 @@ from utils.logging import LoggerUtil
 #   https://finance.yahoo.com/quote/%5EGSPC/history?period1=788936400&period2=1564545600&interval=1mo&filter=history&frequency=1mo
 class Parse:
     logger = None
-    train_dataset_path = "datasets/train.csv"
-    test_dataset_path = "datasets/test.csv"
+    train_dataset_base_path = "datasets/train"
+    test_dataset_base_path = "datasets/test"
 
     def __init__(self, logger: LoggerUtil):
         self.logger = logger
@@ -29,8 +30,13 @@ class Parse:
         train, test = np.array_split(
             df, (fractions[:-1].cumsum() * len(df)).astype(int))
 
-        self.logger.log(self.train_dataset_path, 'debug')
-        train.to_csv(self.train_dataset_path)
-        test.to_csv(self.test_dataset_path)
+        # Setup dynamic filenames
+        dataset_filename = ntpath.basename(dataset)
+        train_dataset_path = f"{self.train_dataset_base_path}-{dataset_filename}.csv"
+        train_dataset_path = f"{self.test_dataset_base_path}-{dataset_filename}.csv"
 
-        return self.train_dataset_path, self.test_dataset_path
+        self.logger.log(train_dataset_path, 'debug')
+        train.to_csv(train_dataset_path)
+        test.to_csv(test_dataset_path)
+
+        return train_dataset_path, test_dataset_path
