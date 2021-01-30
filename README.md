@@ -15,14 +15,16 @@ SageMaker for its robust API and scalability.
 
 ## Getting Started
 
-The provided notebooks require some dependencies to be installed. To install these dependencies run `pip install -r ./src/requirements.txt`
+The provided notebooks require some dependencies to be installed. To install these dependencies run `pip3 install -r ./src/requirements.txt`
 
 This repo also makes use of AWS Sagemaker's SDK which allows you to test and iterate quickly on your dev machine, before
 running a training session. To enable local execution change the `train_instance_type` of your estimator to `local`.
 
+> Note: running locally also requires Docker. Make sure that is installed and running
+
 Lastly, jupyter cell output is distracting when looking at diffs and MRs. To remove this, we use a tool called 
-`nbstripout` and git filters. `nbstripout` was already installed with the requirements files and the git filter is 
-already installed via `.gitattributes`
+`nbstripout` and git filters. I recommend installing it globally with `nbstripout --install --global`. Which ever way 
+you choose, ensure you check it is installed with `nbstripout --status`
 
 ## Input Parameters to Output price distribution
 
@@ -37,7 +39,6 @@ MultivariateEvaluator
   - Twitter
   - News articles
   - Reddit
-  - Intense sickness is negative
   - https://github.com/shirosaidev/stocksight
 - Google Trends
 - Foreign markets
@@ -45,9 +46,6 @@ MultivariateEvaluator
 - Weather?
 - Recessions indicator
 - Exponential Moving Average
-- Time of day (GluonTS takes this into account already, double check it though)
-- Day of week (GluonTS takes this into account already, double check it though)
-- Week of year (GluonTS takes this into account already, double check it though)
 - Percent of presidential cycle
 - Ask/bid spread
 - Sector based performance

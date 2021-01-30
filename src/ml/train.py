@@ -18,12 +18,12 @@ class Train:
         # Hyperparamters determined by tuning job
         # https://console.aws.amazon.com/sagemaker/home?region=us-east-1#/hyper-tuning-jobs/mxnet-training-200414-0823?region=us-east-1&tab=bestTrainingJob
         estimator = MXNet(
-            entry_point='deepar.py',
+            entry_point='deepvar.py',
             source_dir=os.getcwd(),
             role=role,
             train_instance_type=instance_type,
             train_instance_count=1,
-            framework_version='1.6.0',
+            framework_version='1.7.0',  # Should be the same X.X.X version found in requirements.txt
             py_version='py3',
             sagemaker_session=sagemaker_session,
             hyperparameters={

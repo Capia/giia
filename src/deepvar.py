@@ -9,7 +9,7 @@ import pandas as pd
 import pathlib
 import argparse
 import json
-from gluonts.model.deepar import DeepAREstimator
+from gluonts.model.deepvar import DeepVAREstimator
 from gluonts.evaluation.backtest import make_evaluation_predictions
 from gluonts.evaluation import Evaluator
 from gluonts.model.predictor import Predictor
@@ -19,6 +19,10 @@ from gluonts.mx.trainer import Trainer
 
 # Creates a training and testing ListDataset, a DeepAR estimator, and performs the training. It also performs
 # evaluation and prints the MSE metric. This is necessary for the hyperparameter tuning later on.
+#
+# SM_CHANNEL_XXX variables are set from the map passed to `estimator.fit()`. So the key "train" becomes
+# "SM_CHANNEL_TRAIN"
+#
 
 # TODO: Should use https://gist.github.com/ehsanmok/b2c8fa6dbeea55860049414a16ddb3ff#file-lstnet-py-L41
 def train(epochs, prediction_length, num_layers, dropout_rate):
@@ -31,12 +35,13 @@ def train(epochs, prediction_length, num_layers, dropout_rate):
 
     training_data = ListDataset(
         [{"start": df.index[0], "target": df['Adj Close'][:]}],
-        freq="1d"
+        freq="1d", one_dim_target=False
     )
 
     # Define DeepAR estimator
-    estimator = DeepAREstimator(
+    estimator = DeepVAREstimator(
         freq="1d",
+        target_dim=target_dim,
         prediction_length=prediction_length,
         dropout_rate=dropout_rate,
         num_layers=num_layers,
@@ -53,7 +58,7 @@ def train(epochs, prediction_length, num_layers, dropout_rate):
 
     test_data = ListDataset(
         [{"start": df.index[0], "target": df['Adj Close'][:]}],
-        freq="1d"
+        freq="1d", one_dim_target=False
     )
 
     # Evaluate trained model on test data
