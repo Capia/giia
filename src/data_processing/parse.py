@@ -1,22 +1,21 @@
-import os
+from pathlib import Path
 
 import pandas as pd
 import numpy as np
-import ntpath
-from utils.logging import LoggerUtil
+from utils.logger_util import LoggerUtil
 
 
 # Dataset retrieved from:
 #   https://finance.yahoo.com/quote/%5EGSPC/history?period1=788936400&period2=1564545600&interval=1mo&filter=history&frequency=1mo
 class Parse:
     logger = None
-    train_dataset_base_path = "datasets/train"
-    test_dataset_base_path = "datasets/test"
+    TRAIN_DATASET_FILENAME = "train.csv"
+    TEST_DATASET_FILENAME = "test.csv"
 
     def __init__(self, logger: LoggerUtil):
         self.logger = logger
 
-    def split_train_test_dataset(self, dataset: str):
+    def split_train_test_dataset(self, dataset: str, dataset_dir_path: Path):
         df = pd.read_csv(dataset, header=0, index_col=0)
         self.logger.log("First sample:")
         self.logger.log(df.head(1))
@@ -30,13 +29,8 @@ class Parse:
         train, test = np.array_split(
             df, (fractions[:-1].cumsum() * len(df)).astype(int))
 
-        # Setup dynamic filenames
-        dataset_filename = ntpath.basename(dataset)
-        train_dataset_path = f"{self.train_dataset_base_path}-{dataset_filename}.csv"
-        train_dataset_path = f"{self.test_dataset_base_path}-{dataset_filename}.csv"
-
-        self.logger.log(train_dataset_path, 'debug')
-        train.to_csv(train_dataset_path)
-        test.to_csv(test_dataset_path)
-
-        return train_dataset_path, test_dataset_path
+        # Copy dataset channels to their respective file
+        dataset_dir_path.mkdir(parents=True, exist_ok=True)
+        train.to_csv(dataset_dir_path / self.TRAIN_DATASET_FILENAME)
+        test.to_csv(dataset_dir_path / self.TEST_DATASET_FILENAME)
+        self.logger.log(f"Parsed train and test datasets can be found in [{dataset_dir_path}]", 'debug')

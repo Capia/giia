@@ -6,31 +6,35 @@
 import logging
 import threading
 import datetime
+from pathlib import Path
 
 
 class LoggerUtil:
-    logger = None
-    threaded_logging = None
     model_name = None
+    log_dir = None
+    logger = None
+    threaded_logger = None
 
-    def __init__(self, model_name: str):
+    def __init__(self, model_name: str, log_dir: Path):
+        self.model_name = model_name
+        self.log_dir = log_dir
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+
         # Initialize static variables
         if not LoggerUtil.logger:
             LoggerUtil.logger = logging.getLogger()
-        if not LoggerUtil.threaded_logging:
-            LoggerUtil.threaded_logging = LoggerUtil.__start_threaded_logging(self)
+        if not LoggerUtil.threaded_logger:
+            LoggerUtil.threaded_logger = LoggerUtil.__start_threaded_logger(self)
 
-        self.model_name = model_name
-
-    def __start_threaded_logging(self):
-        threaded_logging = threading.Thread(target=self.__setup_file_logger)
-        threaded_logging.start()
-        threaded_logging.join()
+    def __start_threaded_logger(self):
+        threaded_logger = threading.Thread(target=LoggerUtil.__setup_file_logger(self))
+        threaded_logger.start()
+        threaded_logger.join()
         self.log("Background logger started")
-        return threaded_logging
+        return threaded_logger
 
     def __setup_file_logger(self):
-        log_file = "{}-{}.log".format(self.model_name, str(datetime.datetime.now()))
+        log_file = self.log_dir / f"{self.model_name}-{str(datetime.datetime.now())}.log"
         hdlr = logging.FileHandler(log_file)
         formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
         hdlr.setFormatter(formatter)
@@ -38,9 +42,10 @@ class LoggerUtil:
         self.logger.setLevel(logging.INFO)
 
     def log(self, message, type='info'):
-        # outputs to Jupyter console
+        # Outputs to Jupyter console
         print('{} {}'.format(datetime.datetime.now(), message))
-        # outputs to file
+
+        # Outputs to file
         if type == 'info':
             self.logger.info(message)
         elif type == 'warning':
