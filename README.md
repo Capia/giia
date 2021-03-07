@@ -14,13 +14,26 @@ This encompasses using MXNet + GluonTS to create an AI model based on time serie
 SageMaker for its robust API and scalability.
 
 ## Getting Started
+First, set up a virtual environment:
+```
+python -m venv venv
+source venv/bin/activate
+```
 
-The provided notebooks require some dependencies to be installed. To install these dependencies run `pip3 install -r ./src/requirements.txt`
+Then install the dependencies and you are all set:
+```
+pip install -r ./src/requirements.txt
+```
 
-This repo also makes use of AWS Sagemaker's SDK which allows you to test and iterate quickly on your dev machine, before
-running a training session. To enable local execution change the `train_instance_type` of your estimator to `local`.
+Finally, set the jupyter notebook to use the virtual environment:
+```
+ipython kernel install --user --name=capia
+```
 
-> Note: running locally also requires Docker. Make sure that is installed and running
+### Notes
+This repo makes use of AWS Sagemaker's SDK which allows you to test and iterate quickly on your dev machine, before 
+running a training session. To enable local execution change the `train_instance_type` of your estimator to `local`. 
+Running locally requires Docker, make sure that it is installed and running.
 
 Lastly, jupyter cell output is distracting when looking at diffs and MRs. To remove this, we use a tool called 
 `nbstripout` and git filters. I recommend installing it globally with `nbstripout --install --global`. Which ever way 

@@ -11,9 +11,13 @@ src/*.log
 # Notebook cache
 src/notebooks/.cache_magic
 
-# Byte-compiled / optimized / DLL files
+# Python files
+venv/
 __pycache__/
 *.py[cod]
+
+# Artifacts
+out/
 
 # Other
 .DS_Store
