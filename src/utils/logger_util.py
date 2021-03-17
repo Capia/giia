@@ -41,16 +41,19 @@ class LoggerUtil:
         self.logger.addHandler(hdlr)
         self.logger.setLevel(logging.INFO)
 
-    def log(self, message, type='info'):
+    def log(self, message, log_level='info', newline=False):
+        if newline:
+            message = f"\n{message}"
+
         # Outputs to Jupyter console
         print('{} {}'.format(datetime.datetime.now(), message))
 
         # Outputs to file
-        if type == 'info':
+        if log_level == 'info':
             self.logger.info(message)
-        elif type == 'warning':
+        elif log_level == 'warning':
             self.logger.warning(message)
-        elif type == 'error':
+        elif log_level == 'error':
             self.logger.error(message)
-        elif type == 'critical':
+        elif log_level == 'critical':
             self.logger.critical(message)

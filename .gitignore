@@ -19,5 +19,8 @@ __pycache__/
 # Artifacts
 out/
 
+# FreqTrade
+freqtrade/user_data/data
+
 # Other
 .DS_Store

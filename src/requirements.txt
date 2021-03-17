@@ -1,5 +1,5 @@
 # Should be the same version found in train.py
-mxnet==1.6.0
+mxnet~=1.7
 
 PyYAML==5.4.1
 jupyter==1.0.0
@@ -10,6 +10,12 @@ numpy==1.19.5
 pandas==1.1.5
 s3fs==0.4.2
 sagemaker==2.23.6
-gluonts==0.6.4
+gluonts==0.6.7
 
 nbstripout==0.3.9
+
+# Note: freqtrade is purposely left out as it is needed for development and notebook execution, but not for training.
+#  Amazon Sagemaker will try to use this requirements.txt to replicate our environment, which is a good thing, but the
+#  Sagemaker docker image does not contain the necessary TA-Lib library. You can work around this with https://github.com/aws/amazon-sagemaker-examples/blob/master/advanced_functionality/pytorch_extending_our_containers/pytorch_extending_our_containers.ipynb
+#  though that is currently outside the scope of this project (i.e. adds to much friction for not much value).
+# freqtrade

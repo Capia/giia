@@ -18,10 +18,10 @@ from gluonts.evaluation.backtest import make_evaluation_predictions
 from gluonts.evaluation import Evaluator
 from gluonts.model.predictor import Predictor
 from gluonts.model.forecast import Config, Forecast
-from gluonts.dataset.common import DataEntry, ListDataset
+from gluonts.dataset.common import DataEntry, ListDataset, TimeZoneStrategy
 from gluonts.mx.trainer import Trainer
 
-from data_processing.parse import Parse
+import config.const as conf
 
 
 # Creates a training and testing ListDataset, a DeepAR estimator, and performs the training. It also performs
@@ -30,21 +30,21 @@ from data_processing.parse import Parse
 # TODO: Should use https://gist.github.com/ehsanmok/b2c8fa6dbeea55860049414a16ddb3ff#file-lstnet-py-L41
 def train(epochs, prediction_length, num_layers, dropout_rate):
     dataset_dir_path = Path(os.environ['SM_CHANNEL_DATASET'])
-    train_dataset_path = dataset_dir_path / Parse.TRAIN_DATASET_FILENAME
-    test_dataset_filename = dataset_dir_path / Parse.TEST_DATASET_FILENAME
+    train_dataset_path = dataset_dir_path / conf.TRAIN_DATASET_FILENAME
+    test_dataset_filename = dataset_dir_path / conf.TEST_DATASET_FILENAME
 
     # Create train dataset
     df = pd.read_csv(filepath_or_buffer=train_dataset_path, header=0, index_col=0)
     describe_df(df, train_dataset_path)
 
     training_data = ListDataset(
-        [{"start": df.index[0], "target": df['Adj Close'][:]}],
-        freq="1d"
+        [{"start": df.index[0], "target": df['close'][:]}],
+        freq="5min"
     )
 
     # Define DeepAR estimator
     estimator = DeepAREstimator(
-        freq="1d",
+        freq="5min",
         prediction_length=prediction_length,
         dropout_rate=dropout_rate,
         num_layers=num_layers,
@@ -59,15 +59,15 @@ def train(epochs, prediction_length, num_layers, dropout_rate):
     describe_df(df, test_dataset_filename)
 
     test_data = ListDataset(
-        [{"start": df.index[0], "target": df['Adj Close'][:]}],
-        freq="1d"
+        [{"start": df.index[0], "target": df['close'][:]}],
+        freq="5min"
     )
 
     # Evaluate trained model on test data
     forecast_it, ts_it = make_evaluation_predictions(
         dataset=test_data,  # test dataset
         predictor=predictor,  # predictor
-        num_samples=100,  # number of sample paths we want for evaluation
+        num_samples=100,  # number of samples used in probabilistic evaluation
     )
 
     forecasts = list(forecast_it)
