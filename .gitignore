@@ -20,7 +20,8 @@ __pycache__/
 out/
 
 # FreqTrade
-freqtrade/user_data/data
+src/freqtrade/user_data/data
+src/freqtrade/user_data/logs
 
 # Other
 .DS_Store

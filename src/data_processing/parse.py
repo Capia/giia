@@ -1,10 +1,10 @@
-from pathlib import Path
-
 import numpy as np
+from pathlib import Path
 from pandas import DataFrame
 
 from utils.logger_util import LoggerUtil
 from freqtrade.data.history import load_pair_history
+from freqtrade.configuration import Configuration
 
 import config.const as conf
 
@@ -15,11 +15,14 @@ class Parse:
     def __init__(self, logger: LoggerUtil):
         self.logger = logger
 
-    def split_train_test_dataset(self, src_dataset_dir_path: Path, dataset_dir_path: Path):
-        # TODO: Read from freqtrade config
+    def split_train_test_dataset(self, dataset_dir_path: Path):
+        src_dataset_dir = Path(conf.FREQTRADE_USER_DATA_DIR) / "data" / "binance"
+        config_file = Path(conf.FREQTRADE_USER_DATA_DIR) / "config.json"
+
+        config = Configuration.from_files([str(config_file)])
         candles = load_pair_history(
-            datadir=src_dataset_dir_path,
-            timeframe="5m",
+            datadir=src_dataset_dir,
+            timeframe=config["timeframe"],
             pair="ETH/BTC")
 
         if candles.empty:
