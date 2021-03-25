@@ -1,5 +1,5 @@
 # Should be the same version found in train.py
-mxnet>=1.6,<1.7
+mxnet==1.7.*
 
 PyYAML==5.4.1
 jupyter==1.0.0
