@@ -33,7 +33,7 @@ pip install freqtrade
 
 Finally, set the jupyter notebook to use the virtual environment:
 ```
-ipython kernel install --user --name=capia
+python -m ipykernel install --user --name=capia --display-name="Capia (venv)"
 ```
 
 ### Notes

@@ -3,10 +3,9 @@ from pathlib import Path
 from pandas import DataFrame
 
 from utils.logger_util import LoggerUtil
+from utils import config
 from freqtrade.data.history import load_pair_history
 from freqtrade.configuration import Configuration
-
-import config.const as conf
 
 
 class Parse:
@@ -16,13 +15,13 @@ class Parse:
         self.logger = logger
 
     def split_train_test_dataset(self, dataset_dir_path: Path):
-        src_dataset_dir = Path(conf.FREQTRADE_USER_DATA_DIR) / "data" / "binance"
-        config_file = Path(conf.FREQTRADE_USER_DATA_DIR) / "config.json"
+        # First prime the user_data_dir key. This will take priority when merged with config.json
+        freqtrade_config = Configuration({"user_data_dir": config.FREQTRADE_USER_DATA_DIR})
+        freqtrade_config = freqtrade_config.load_from_files([str(config.FREQTRADE_USER_DATA_DIR / "config.json")])
 
-        config = Configuration.from_files([str(config_file)])
         candles = load_pair_history(
-            datadir=src_dataset_dir,
-            timeframe=config["timeframe"],
+            datadir=config.FREQTRADE_USER_DATA_DIR / "data" / "binance",
+            timeframe=freqtrade_config["timeframe"],
             pair="ETH/BTC")
 
         if candles.empty:
@@ -45,8 +44,8 @@ class Parse:
 
         # Copy dataset channels to their respective file
         dataset_dir_path.mkdir(parents=True, exist_ok=True)
-        train.to_csv(dataset_dir_path / conf.TRAIN_DATASET_FILENAME)
-        test.to_csv(dataset_dir_path / conf.TEST_DATASET_FILENAME)
+        train.to_csv(dataset_dir_path / config.TRAIN_DATASET_FILENAME)
+        test.to_csv(dataset_dir_path / config.TEST_DATASET_FILENAME)
         self.logger.log(f"Parsed train and test datasets can be found in [{dataset_dir_path}]", 'debug')
 
     def _marshal_candles(self, candles: DataFrame):
