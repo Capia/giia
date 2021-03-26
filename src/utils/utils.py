@@ -14,3 +14,10 @@ class Utils:
         self.logger.log(f"The model id is [{config.MODEL_ID}]")
         self.logger.log(f"The MXNet version is [{mxnet.__version__}]")
         self.logger.log(f"The GPU count is [{mxnet.context.num_gpus()}]")
+
+    def is_integer_num(self, x):
+        if isinstance(x, int):
+            return True
+        if isinstance(x, float):
+            return x.is_integer()
+        return False

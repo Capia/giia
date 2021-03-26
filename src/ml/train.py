@@ -32,12 +32,12 @@ class Train:
             # TODO
             # enable_sagemaker_metrics=True,
 
-            # TODO: Learning rate?
+            # TODO: learning_rate, hidden_channels, num_batches_per_epoch
             hyperparameters={
-                'epochs': config.HP_EPOCHS,
-                'prediction_length': config.HP_PREDICTION_LENGTH,
-                'num_layers': config.HP_NUM_LAYERS,
-                'dropout_rate': config.HP_DROPOUT_RATE
+                'epochs': config.HYPER_PARAMETERS['epochs'],
+                'prediction_length': config.HYPER_PARAMETERS['prediction_length'],
+                'num_layers': config.HYPER_PARAMETERS['num_layers'],
+                'dropout_rate': config.HYPER_PARAMETERS['dropout_rate']
             },
             kwargs=kwargs
         )

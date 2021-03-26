@@ -4,16 +4,20 @@ from sagemaker.estimator import EstimatorBase
 from sagemaker.tuner import HyperparameterTuner, ContinuousParameter, IntegerParameter
 import pandas as pd
 
+from utils.utils import Utils
 from utils.logger_util import LoggerUtil
+from utils import config
 
 
 class Tune:
+    utils = None
     logger = None
     tuning_job_name = None
     is_minimize = None
     objective_name = None
 
-    def __init__(self, logger: LoggerUtil):
+    def __init__(self, utils: Utils, logger: LoggerUtil):
+        self.utils = utils
         self.logger = logger
 
     def create_tuner(self, estimator: EstimatorBase):
@@ -21,10 +25,15 @@ class Tune:
             estimator=estimator,
             objective_metric_name='loss',
             hyperparameter_ranges={
-                'epochs': IntegerParameter(10, 30),
-                'prediction_length': IntegerParameter(5, 20),
-                'num_layers': IntegerParameter(2, 10),
-                'dropout_rate': ContinuousParameter(0, 0.25)},
+                'epochs': self._get_range_for_hyperparameter(
+                    config.HYPER_PARAMETERS['epochs']),
+                'prediction_length': self._get_range_for_hyperparameter(
+                    config.HYPER_PARAMETERS['prediction_length']),
+                'num_layers': self._get_range_for_hyperparameter(
+                    config.HYPER_PARAMETERS['num_layers'], hp_range=5, hp_allowed_max=10),
+                'dropout_rate': self._get_range_for_hyperparameter(
+                    config.HYPER_PARAMETERS['dropout_rate'], hp_allowed_min=0.001),
+            },
             metric_definitions=[{'Name': 'loss', 'Regex': "MSE: ([0-9\\.]+)"}],
             max_jobs=15,
             max_parallel_jobs=3,
@@ -70,3 +79,38 @@ class Tune:
                 self.logger.log("No training jobs have reported valid results yet.")
 
         return df
+
+    def _get_range_for_hyperparameter(self, hp_key, hp_range=None, hp_allowed_min=None, hp_allowed_max=None):
+        """Best attempt to dynamically find a hyperparameter's range based on current tuned value"""
+        hp = config.HYPER_PARAMETERS[hp_key]
+
+        # First, set defaults if they have not been provided
+        if hp_range is None:
+            if self.utils.is_integer_num(hp):
+                hp_range = hp // 2
+            if isinstance(hp, float):
+                hp_range = hp / 2
+
+        if hp_allowed_min is None:
+            if self.utils.is_integer_num(hp):
+                hp_allowed_min = max(1, hp // 2)
+            if isinstance(hp, float):
+                hp_allowed_min = max(0.0001, hp / 2)
+
+        if hp_allowed_max is None:
+            hp_allowed_max = hp * 2
+
+        # Then determine an appropriate range
+        hp_min = max(hp_allowed_min, hp - hp_range)
+        hp_max = min(hp_allowed_max, hp + hp_range)
+        self.logger.log(f"Hyperparameter [{hp_key}] default value is [{hp}]. The min range will be set to [{hp_min}] "
+                        f"and the max range will be set to [{hp_max}]")
+
+        # Lastly, return the appropriate parameter range object
+        if self.utils.is_integer_num(hp):
+            assert self.utils.is_integer_num(hp_range)
+            assert self.utils.is_integer_num(hp_allowed_min)
+            assert self.utils.is_integer_num(hp_allowed_max)
+            return IntegerParameter(hp_min, hp_max)
+        if isinstance(hp, float):
+            return ContinuousParameter(hp_min, hp_max)

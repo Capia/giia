@@ -57,6 +57,8 @@ you choose, ensure you check it is installed with `nbstripout --status`
 ## Backlog
 ### TODO
 - Rolling time series (unreleased version of gluonts)
+- Visualize model (tensorboard like)
+- Visualize model's performance (tensorboard like)
 - Calculate model's confidence
   - This can be based of spread of precentiles, RMSE, and other model output.
 - Calculate risk factor feature

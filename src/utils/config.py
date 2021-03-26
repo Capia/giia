@@ -14,9 +14,10 @@ FREQTRADE_USER_DATA_DIR = Path("freqtrade") / "user_data"
 
 CRYPTO_PAIR = "BTC/USDT"
 
-# If you permenatly update these values, then you should also update the MODEL_VERSION
-HP_EPOCHS = 20
-HP_PREDICTION_LENGTH = 16
-HP_NUM_LAYERS = 4
-HP_DROPOUT_RATE = 0.209371
-
+# If you permanently update these values, then you should also update the MODEL_VERSION
+HYPER_PARAMETERS = {
+    'epochs': 20,
+    'prediction_length': 16,
+    'num_layers': 4,
+    'dropout_rate': 0.209371
+}
