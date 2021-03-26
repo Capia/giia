@@ -43,7 +43,7 @@ class Tune:
         return tuner
 
     def fit_tuner(self, tuner: HyperparameterTuner, dataset_dir_uri: str):
-        tuner.fit({"dataset": dataset_dir_uri})
+        tuner.fit({"dataset": dataset_dir_uri}, wait=False)
         self.tuning_job_name = tuner.latest_tuning_job.job_name
         self.logger.log("Tuning job name: " + self.tuning_job_name)
 
