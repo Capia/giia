@@ -21,18 +21,18 @@ class Tune:
             estimator=estimator,
             objective_metric_name='loss',
             hyperparameter_ranges={
-                'epochs': IntegerParameter(5, 20),
+                'epochs': IntegerParameter(10, 30),
                 'prediction_length': IntegerParameter(5, 20),
-                'num_layers': IntegerParameter(1, 5),
-                'dropout_rate': ContinuousParameter(0, 0.5)},
+                'num_layers': IntegerParameter(2, 10),
+                'dropout_rate': ContinuousParameter(0, 0.25)},
             metric_definitions=[{'Name': 'loss', 'Regex': "MSE: ([0-9\\.]+)"}],
-            max_jobs=10,
-            max_parallel_jobs=5,
+            max_jobs=15,
+            max_parallel_jobs=3,
             objective_type='Minimize')
         return tuner
 
-    def fit_tuner(self, tuner: HyperparameterTuner, s3_train_data_path: str, s3_test_data_path: str):
-        tuner.fit({'train': s3_train_data_path, "test": s3_test_data_path})
+    def fit_tuner(self, tuner: HyperparameterTuner, dataset_dir_uri: str):
+        tuner.fit({"dataset": dataset_dir_uri})
         self.tuning_job_name = tuner.latest_tuning_job.job_name
         self.logger.log("Tuning job name: " + self.tuning_job_name)
 

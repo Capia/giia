@@ -46,5 +46,5 @@ class Upload:
                 self.logger.log('Overwriting existing file')
 
         with open(local_file, 'rb') as data:
-            self.logger.log('Uploading file to {}'.format(s3_path))
             self.s3_bucket_resource.put_object(Key=path, Body=data)
+            self.logger.log('Uploaded file to {}'.format(s3_path))
