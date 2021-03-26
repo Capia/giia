@@ -13,7 +13,7 @@ from utils import config
 class Train:
     logger = None
     training_job_name = None
-    model_dir_path = None
+    model_data_path = None
 
     def __init__(self, logger: LoggerUtil):
         self.logger = logger
@@ -33,12 +33,14 @@ class Train:
             # enable_sagemaker_metrics=True,
 
             # TODO: learning_rate, hidden_channels, num_batches_per_epoch
+            # https://docs.aws.amazon.com/sagemaker/latest/dg/deepar_hyperparameters.html
             hyperparameters={
                 'epochs': config.HYPER_PARAMETERS['epochs'],
                 'prediction_length': config.HYPER_PARAMETERS['prediction_length'],
                 'num_layers': config.HYPER_PARAMETERS['num_layers'],
                 'dropout_rate': config.HYPER_PARAMETERS['dropout_rate']
             },
+            # output_path=kwargs
             kwargs=kwargs
         )
         return estimator
@@ -47,8 +49,5 @@ class Train:
         estimator.fit({"dataset": dataset_dir_uri})
         self.logger.log("Training job name: " + estimator.latest_training_job.job_name)
 
-        model_data_path = Path(unquote(urlparse(estimator.model_data).path))
-        self.logger.log("Full model data path: " + str(model_data_path))
-
-        self.model_dir_path = model_data_path.parent.parent
-        self.logger.log("Model is save in: " + str(self.model_dir_path))
+        self.model_data_path = Path(unquote(urlparse(estimator.model_data).path))
+        self.logger.log("Model is saved in: " + str(self.model_data_path))

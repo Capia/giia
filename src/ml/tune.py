@@ -21,18 +21,20 @@ class Tune:
         self.logger = logger
 
     def create_tuner(self, estimator: EstimatorBase):
+        # Hyperparamters are dynamically computed based on current values. Max and min are based on typical values
+        # mentioned here https://docs.aws.amazon.com/sagemaker/latest/dg/deepar_hyperparameters.html
         tuner = HyperparameterTuner(
             estimator=estimator,
             objective_metric_name='loss',
             hyperparameter_ranges={
                 'epochs': self._get_range_for_hyperparameter(
-                    config.HYPER_PARAMETERS['epochs']),
+                    'epochs', hp_allowed_max=1000),
                 'prediction_length': self._get_range_for_hyperparameter(
-                    config.HYPER_PARAMETERS['prediction_length']),
+                    'prediction_length'),
                 'num_layers': self._get_range_for_hyperparameter(
-                    config.HYPER_PARAMETERS['num_layers'], hp_range=5, hp_allowed_max=10),
+                    'num_layers', hp_range=5, hp_allowed_max=10),
                 'dropout_rate': self._get_range_for_hyperparameter(
-                    config.HYPER_PARAMETERS['dropout_rate'], hp_allowed_min=0.001),
+                    'dropout_rate', hp_allowed_min=0.001, hp_allowed_max=0.2),
             },
             metric_definitions=[{'Name': 'loss', 'Regex': "MSE: ([0-9\\.]+)"}],
             max_jobs=15,
