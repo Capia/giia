@@ -4,7 +4,7 @@ from sagemaker.estimator import EstimatorBase
 from sagemaker.tuner import HyperparameterTuner, ContinuousParameter, IntegerParameter
 import pandas as pd
 
-from utils.logging import LoggerUtil
+from utils.logger_util import LoggerUtil
 
 
 class Tune:

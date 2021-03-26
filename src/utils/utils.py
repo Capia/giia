@@ -1,5 +1,7 @@
 import mxnet
-from utils.logging import LoggerUtil
+
+from utils.logger_util import LoggerUtil
+from utils import config
 
 
 class Utils:
@@ -9,6 +11,6 @@ class Utils:
         self.logger = logger
 
     def describe_env(self):
-        self.logger.log(mxnet.__version__)
-        gpu_count = mxnet.context.num_gpus()
-        self.logger.log(f"The GPU count is [{gpu_count}]")
+        self.logger.log(f"The model id is [{config.MODEL_ID}]")
+        self.logger.log(f"The MXNet version is [{mxnet.__version__}]")
+        self.logger.log(f"The GPU count is [{mxnet.context.num_gpus()}]")

@@ -2,15 +2,26 @@
 .idea/
 *.iml
 
+# VS Code
+.vscode/
+
 # Notebook logs
 src/*.log
 
 # Notebook cache
 src/notebooks/.cache_magic
 
-# Byte-compiled / optimized / DLL files
+# Python files
+venv/
 __pycache__/
 *.py[cod]
+
+# Artifacts
+out/
+
+# FreqTrade
+src/freqtrade/user_data/data
+src/freqtrade/user_data/logs
 
 # Other
 .DS_Store

@@ -1,26 +1,39 @@
-import os
-
-import pandas as pd
 import numpy as np
-from utils.logging import LoggerUtil
+from pathlib import Path
+from pandas import DataFrame
+
+from utils.logger_util import LoggerUtil
+from utils import config
+from freqtrade.data.history import load_pair_history
+from freqtrade.configuration import Configuration
 
 
-# Dataset retrieved from:
-#   https://finance.yahoo.com/quote/%5EGSPC/history?period1=788936400&period2=1564545600&interval=1mo&filter=history&frequency=1mo
 class Parse:
     logger = None
-    train_dataset_path = "datasets/train.csv"
-    test_dataset_path = "datasets/test.csv"
 
     def __init__(self, logger: LoggerUtil):
         self.logger = logger
 
-    def split_train_test_dataset(self, dataset: str):
-        df = pd.read_csv(dataset, header=0, index_col=0)
+    def split_train_test_dataset(self, dataset_dir_path: Path):
+        # First prime the user_data_dir key. This will take priority when merged with config.json
+        freqtrade_config = Configuration({"user_data_dir": config.FREQTRADE_USER_DATA_DIR})
+        freqtrade_config = freqtrade_config.load_from_files([str(config.FREQTRADE_USER_DATA_DIR / "config.json")])
+
+        candles = load_pair_history(
+            datadir=config.FREQTRADE_USER_DATA_DIR / "data" / "binance",
+            timeframe=freqtrade_config["timeframe"],
+            pair="ETH/BTC")
+
+        if candles.empty:
+            raise ValueError('The candle dataframe is empty. Ensure that you are loading a dataset that has been '
+                             'downloaded to the configured location')
+
+        df = self._marshal_candles(candles)
+
         self.logger.log("First sample:")
-        self.logger.log(df.head(1))
-        self.logger.log("\nLast sample:")
-        self.logger.log(df.tail(1))
+        self.logger.log(df.head(1), newline=True)
+        self.logger.log("Last sample:")
+        self.logger.log(df.tail(1), newline=True)
 
         # Configure fractions to split dataset between training and testing (validation can be added easily)
         fractions = np.array([0.7, 0.3])
@@ -29,8 +42,16 @@ class Parse:
         train, test = np.array_split(
             df, (fractions[:-1].cumsum() * len(df)).astype(int))
 
-        self.logger.log(self.train_dataset_path, 'debug')
-        train.to_csv(self.train_dataset_path)
-        test.to_csv(self.test_dataset_path)
+        # Copy dataset channels to their respective file
+        dataset_dir_path.mkdir(parents=True, exist_ok=True)
+        train.to_csv(dataset_dir_path / config.TRAIN_DATASET_FILENAME)
+        test.to_csv(dataset_dir_path / config.TEST_DATASET_FILENAME)
+        self.logger.log(f"Parsed train and test datasets can be found in [{dataset_dir_path}]", 'debug')
 
-        return self.train_dataset_path, self.test_dataset_path
+    def _marshal_candles(self, candles: DataFrame):
+        # Index by datetime
+        df = candles.set_index('date')
+
+        # Then remove UTC timezone since GluonTS does not work with it
+        df.index = df.index.tz_localize(None)
+        return df
