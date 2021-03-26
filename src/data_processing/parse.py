@@ -22,7 +22,7 @@ class Parse:
         candles = load_pair_history(
             datadir=config.FREQTRADE_USER_DATA_DIR / "data" / "binance",
             timeframe=freqtrade_config["timeframe"],
-            pair="ETH/BTC")
+            pair=config.CRYPTO_PAIR)
 
         if candles.empty:
             raise ValueError('The candle dataframe is empty. Ensure that you are loading a dataset that has been '

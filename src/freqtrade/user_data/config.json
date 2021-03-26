@@ -40,10 +40,16 @@
             "rateLimit": 200
         },
         "pair_whitelist": [
-            "ETH/BTC",
-            "LINK/BTC",
-            "LTC/BTC",
-            "XRP/BTC"
+            "BTC/USDT"
+        ],
+        "pair_whitelist_other": [
+            "BTC/USDT",
+            "BTC/USDC",
+            "BTC/DAI",
+            "BTC/ETH",
+            "BTC/LINK",
+            "BTC/LTC",
+            "BTC/XRP"
         ],
         "pair_blacklist": [
             "BNB/BTC",

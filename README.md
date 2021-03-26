@@ -57,24 +57,11 @@ you choose, ensure you check it is installed with `nbstripout --status`
 ## Backlog
 ### TODO
 - Rolling time series (unreleased version of gluonts)
-- Download more data
-- Check dtype (float64). All test predictions are a couple of decimal points off
 - Calculate model's confidence
   - This can be based of spread of precentiles, RMSE, and other model output.
 - Calculate risk factor feature
   - Here an algorithm can determine the level of risk associated with a trade. Then another algorithm will sort
 and identify the most favorable trades based on risk vs reward.
-
-### Future Implementations
-1) Infrastructure-as-Code with AWS CDK
-2) Set up API gateway
-- Token based
-- Rate limits
-3) Set up DB (likely DynamoDB) to keep track of tokens, user accounts, and how many requests made
-4) UI
-- Hopefully this is based on Flutter and it is Web/Desktop designed
-- Sign in with Apple
-5) Automation
 
 ### Other Ideas for Input Parameters
 - Google Trends
@@ -103,6 +90,7 @@ https://docs.aws.amazon.com/sagemaker/latest/dg/automatic-model-tuning-how-it-wo
 https://github.com/aws-samples/amazon-sagemaker-time-series-prediction-using-gluonts/blob/master/notebooks/part3/twitter_volume_forecast.ipynb
 https://aws.amazon.com/blogs/machine-learning/creating-neural-time-series-models-with-gluon-time-series/
 https://aws.amazon.com/blogs/industries/novartis-ag-uses-amazon-sagemaker-and-gluonts-for-demand-forecasting/
+https://aws.amazon.com/blogs/machine-learning/training-debugging-and-running-time-series-forecasting-models-with-the-gluonts-toolkit-on-amazon-sagemaker/
 https://www.freqtrade.io/en/latest/configuration/
 
 ### Market Viability
