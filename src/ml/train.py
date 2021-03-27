@@ -40,8 +40,7 @@ class Train:
                 'num_layers': config.HYPER_PARAMETERS['num_layers'],
                 'dropout_rate': config.HYPER_PARAMETERS['dropout_rate']
             },
-            # output_path=kwargs
-            kwargs=kwargs
+            **kwargs
         )
         return estimator
 

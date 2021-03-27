@@ -19,8 +19,8 @@ class AWSHandler:
         self.sagemaker_session = sagemaker.Session()
         self.s3_bucket = self.sagemaker_session.default_bucket()
         self.s3_bucket_resource = boto3.resource('s3').Bucket(self.s3_bucket)
-        self.s3_dataset_dir_uri = f"s3://{self.s3_bucket}/{model_id}"
-        self.s3_model_output_uri = f"s3://{self.s3_bucket}/{model_id}/model"
+        self.s3_dataset_dir_uri = f"s3://{self.s3_bucket}/{model_id}/datasets"
+        self.s3_model_output_uri = f"s3://{self.s3_bucket}/{model_id}/models"
 
     def upload_to_sagemaker_s3_bucket(self, dataset_dir_path, dataset_channel_file, override=True):
         self.logger.log(f"Data will be uploaded to [{self.s3_bucket}]")
@@ -44,10 +44,10 @@ class AWSHandler:
             self.s3_bucket_resource.put_object(Key=path, Body=data)
             self.logger.log('Uploaded file to {}'.format(s3_path))
 
-    def download_model_from_s3(self, model_data_zip_path: str, local_model_path: Path):
+    def download_model_from_s3(self, model_data_zip_path: str, local_artifact_dir: Path):
         # First download the compressed model
         model_data_zip_path = model_data_zip_path[1:]
-        local_zip_path = local_model_path / model_data_zip_path
+        local_zip_path = local_artifact_dir / model_data_zip_path
         local_zip_path.parent.mkdir(parents=True, exist_ok=True)
 
         self.logger.log(f"Downloading [{model_data_zip_path}] from s3 to [{str(local_zip_path)}]")

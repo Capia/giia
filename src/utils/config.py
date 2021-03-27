@@ -24,7 +24,7 @@ _REAL_HYPER_PARAMETERS = {
 
 _QUICK_ITERATION_HYPER_PARAMETERS = {
     'epochs': 1,
-    'prediction_length': 1,
+    'prediction_length': 15,
     'num_layers': 1,
     'dropout_rate': 0.001
 }
