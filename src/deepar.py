@@ -45,12 +45,12 @@ def train(epochs, prediction_length, num_layers, dropout_rate):
             "high": df['high'][:],
             "low": df['low'][:],
          }],
-        freq="5min"
+        freq=config.DATASET_FREQ
     )
 
     # Define DeepAR estimator
     estimator = DeepAREstimator(
-        freq="5min",
+        freq=config.DATASET_FREQ,
         prediction_length=prediction_length,
         dropout_rate=dropout_rate,
         num_layers=num_layers,
@@ -72,7 +72,7 @@ def train(epochs, prediction_length, num_layers, dropout_rate):
             "high": df['high'][:],
             "low": df['low'][:],
         }],
-        freq="5min"
+        freq=config.DATASET_FREQ
     )
 
     # Evaluate trained model on test data

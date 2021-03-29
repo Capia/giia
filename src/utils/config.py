@@ -9,6 +9,7 @@ SM_ROLE = 'arn:aws:iam::941048668662:role/service-role/AmazonSageMaker-Execution
 
 TRAIN_DATASET_FILENAME = "train.csv"
 TEST_DATASET_FILENAME = "test.csv"
+DATASET_FREQ = "5min"
 
 FREQTRADE_USER_DATA_DIR = Path("freqtrade") / "user_data"
 
