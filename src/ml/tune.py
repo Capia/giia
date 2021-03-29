@@ -26,6 +26,7 @@ class Tune:
         tuner = HyperparameterTuner(
             estimator=estimator,
             objective_metric_name='loss',
+            metric_definitions=[{'Name': 'loss', 'Regex': "\"MASE\": ([0-9\\.]+)"}],
             hyperparameter_ranges={
                 'epochs': self._get_range_for_hyperparameter(
                     'epochs', hp_allowed_max=1000),
@@ -36,7 +37,6 @@ class Tune:
                 'dropout_rate': self._get_range_for_hyperparameter(
                     'dropout_rate', hp_allowed_min=0.001, hp_allowed_max=0.2),
             },
-            metric_definitions=[{'Name': 'loss', 'Regex': "MSE: ([0-9\\.]+)"}],
             max_jobs=15,
             max_parallel_jobs=3,
             objective_type='Minimize')

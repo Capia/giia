@@ -12,6 +12,21 @@ short-term outlooks for any given cyrpto.
 This encompasses using MXNet + GluonTS to create an AI model based on time series data. This repo leverages AWS 
 SageMaker for its robust API and scalability.
 
+## Model Architecture
+Currently the model is using DeepAR. However, other models listed below should be tested for their effectiveness. 
+LSTNet is likely the most promising.
+
+- **DeepAR** is a supervised learning algorithm for forecasting scalar time series using recurrent neural networks 
+  (RNN)
+- **SFeedFwd** (Simple Feedforward) is a supervised learning algorithm where information moves in only one 
+  direction—forward—from the input nodes, through the hidden nodes (if any) and to the output nodes in the forward 
+  direction
+- **LSTNet** (Long- and Short-term Time-series network) is a multivariate time series forecasting model that uses the 
+  combination of Convolution Neural Network (CNN) and the Recurrent Neural Network (RNN) to find short-term local 
+  dependency patterns among variables and them find long-term patterns for time series trends
+- **Seq2Seq** (Sequence-to-sequence learning) is a method to train models to convert sequences from one domain to 
+  sequences in another domain
+
 ## Getting Started
 First, set up a virtual environment:
 ```
@@ -57,6 +72,7 @@ you choose, ensure you check it is installed with `nbstripout --status`
 ## Backlog
 ### TODO
 - Rolling time series (unreleased version of gluonts)
+- Feature time series (multivariate?)
 - Visualize model (tensorboard like)
 - Visualize model's performance (tensorboard like)
 - Calculate model's confidence
@@ -93,6 +109,8 @@ https://github.com/aws-samples/amazon-sagemaker-time-series-prediction-using-glu
 https://aws.amazon.com/blogs/machine-learning/creating-neural-time-series-models-with-gluon-time-series/
 https://aws.amazon.com/blogs/industries/novartis-ag-uses-amazon-sagemaker-and-gluonts-for-demand-forecasting/
 https://aws.amazon.com/blogs/machine-learning/training-debugging-and-running-time-series-forecasting-models-with-the-gluonts-toolkit-on-amazon-sagemaker/
+https://docs.aws.amazon.com/sagemaker/latest/dg/deepar_hyperparameters.html
+https://github.com/awslabs/sagemaker-deep-demand-forecast
 https://www.freqtrade.io/en/latest/configuration/
 
 ### Market Viability

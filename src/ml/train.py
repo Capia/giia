@@ -33,7 +33,6 @@ class Train:
             # enable_sagemaker_metrics=True,
 
             # TODO: learning_rate, hidden_channels, num_batches_per_epoch
-            # https://docs.aws.amazon.com/sagemaker/latest/dg/deepar_hyperparameters.html
             hyperparameters={
                 'epochs': config.HYPER_PARAMETERS['epochs'],
                 'prediction_length': config.HYPER_PARAMETERS['prediction_length'],
@@ -42,6 +41,7 @@ class Train:
             },
             **kwargs
         )
+
         return estimator
 
     def fit_model(self, estimator: EstimatorBase, dataset_dir_uri: str):

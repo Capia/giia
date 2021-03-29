@@ -38,7 +38,13 @@ def train(epochs, prediction_length, num_layers, dropout_rate):
     describe_df(df, train_dataset_path)
 
     training_data = ListDataset(
-        [{"start": df.index[0], "target": df['close'][:]}],
+        [{
+            "start": df.index[0],
+            "target": df['close'][:],
+            "open": df['open'][:],
+            "high": df['high'][:],
+            "low": df['low'][:],
+         }],
         freq="5min"
     )
 
@@ -59,7 +65,13 @@ def train(epochs, prediction_length, num_layers, dropout_rate):
     describe_df(df, test_dataset_filename)
 
     test_data = ListDataset(
-        [{"start": df.index[0], "target": df['close'][:]}],
+        [{
+            "start": df.index[0],
+            "target": df['close'][:],
+            "open": df['open'][:],
+            "high": df['high'][:],
+            "low": df['low'][:],
+        }],
         freq="5min"
     )
 
@@ -76,8 +88,8 @@ def train(epochs, prediction_length, num_layers, dropout_rate):
     evaluator = Evaluator(quantiles=[0.1, 0.5, 0.9])
     agg_metrics, item_metrics = evaluator(iter(tss), iter(forecasts), num_series=len(test_data))
 
-    # Required for hyperparameter training
-    print("MSE:", agg_metrics["MSE"])
+    # Required for hyperparameter training, but also useful to debug model's performance
+    print(json.dumps(agg_metrics, indent=4))
 
     # Save the model
     predictor.serialize(Path(os.environ['SM_MODEL_DIR']))
