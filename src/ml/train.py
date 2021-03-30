@@ -32,13 +32,8 @@ class Train:
             # TODO
             # enable_sagemaker_metrics=True,
 
-            # TODO: learning_rate, hidden_channels, num_batches_per_epoch
-            hyperparameters={
-                'epochs': config.HYPER_PARAMETERS['epochs'],
-                'prediction_length': config.HYPER_PARAMETERS['prediction_length'],
-                'num_layers': config.HYPER_PARAMETERS['num_layers'],
-                'dropout_rate': config.HYPER_PARAMETERS['dropout_rate']
-            },
+            # TODO: learning_rate, hidden_channels
+            hyperparameters=self._get_hyperparameters(),
             **kwargs
         )
 
@@ -50,3 +45,18 @@ class Train:
 
         self.model_data_path = Path(unquote(urlparse(estimator.model_data).path))
         self.logger.log("Model is saved in: " + str(self.model_data_path))
+
+    def _get_hyperparameters(self) -> dict:
+        hp = {
+            'epochs': config.HYPER_PARAMETERS['epochs'],
+            'batch_size': config.HYPER_PARAMETERS['batch_size'],
+            'context_length': config.HYPER_PARAMETERS['context_length'],
+            'prediction_length': config.HYPER_PARAMETERS['prediction_length'],
+            'num_layers': config.HYPER_PARAMETERS['num_layers'],
+            'dropout_rate': config.HYPER_PARAMETERS['dropout_rate']
+        }
+
+        if config.HYPER_PARAMETERS['num_batches_per_epoch']:
+            hp['num_batches_per_epoch'] = config.HYPER_PARAMETERS['num_batches_per_epoch']
+
+        return hp

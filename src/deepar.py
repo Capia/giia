@@ -28,8 +28,10 @@ from utils import config
 # evaluation and prints the MSE metric. This is necessary for the hyperparameter tuning later on.
 
 # TODO: Should use https://gist.github.com/ehsanmok/b2c8fa6dbeea55860049414a16ddb3ff#file-lstnet-py-L41
-def train(epochs, prediction_length, num_layers, dropout_rate):
-    dataset_dir_path = Path(os.environ['SM_CHANNEL_DATASET'])
+def train(model_args):
+    print(f"Using the follow arguments: [{model_args}]")
+
+    dataset_dir_path = Path(model_args.dataset_dir)
     train_dataset_path = dataset_dir_path / config.TRAIN_DATASET_FILENAME
     test_dataset_filename = dataset_dir_path / config.TEST_DATASET_FILENAME
 
@@ -48,13 +50,23 @@ def train(epochs, prediction_length, num_layers, dropout_rate):
         freq=config.DATASET_FREQ
     )
 
+    if not model_args.num_batches_per_epoch:
+        model_args.num_batches_per_epoch = len(df) // model_args.batch_size
+        print(f"Defaulting num_batches_per_epoch to: [{model_args.num_batches_per_epoch}] "
+              f"= (length of train dataset [{len(df)}]) / (batch size [{model_args.batch_size}])")
+
     # Define DeepAR estimator
     estimator = DeepAREstimator(
         freq=config.DATASET_FREQ,
-        prediction_length=prediction_length,
-        dropout_rate=dropout_rate,
-        num_layers=num_layers,
-        trainer=Trainer(epochs=epochs)
+        context_length=model_args.context_length,
+        prediction_length=model_args.prediction_length,
+        dropout_rate=model_args.dropout_rate,
+        num_layers=model_args.num_layers,
+        trainer=Trainer(
+            epochs=model_args.epochs,
+            batch_size=model_args.batch_size,
+            num_batches_per_epoch=model_args.num_batches_per_epoch
+        )
     )
 
     # Train the model
@@ -92,7 +104,7 @@ def train(epochs, prediction_length, num_layers, dropout_rate):
     print(json.dumps(agg_metrics, indent=4))
 
     # Save the model
-    predictor.serialize(Path(os.environ['SM_MODEL_DIR']))
+    predictor.serialize(Path(model_args.model_dir))
 
     return predictor
 
@@ -215,13 +227,34 @@ def describe_df(df, dataset_channel_file: str):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--epochs', type=int, default=10)
-    parser.add_argument('--prediction_length', type=int, default=12)
-    parser.add_argument('--num_layers', type=int, default=2)
-    parser.add_argument('--dropout_rate', type=float, default=0.1)
+    parser.add_argument('--epochs', type=int, default=config.HYPER_PARAMETERS["epochs"])
+    parser.add_argument('--batch_size', type=int, default=config.HYPER_PARAMETERS["batch_size"])
+    parser.add_argument('--context_length', type=int, default=config.HYPER_PARAMETERS["context_length"])
+    parser.add_argument('--prediction_length', type=int, default=config.HYPER_PARAMETERS["prediction_length"])
+    parser.add_argument('--num_layers', type=int, default=config.HYPER_PARAMETERS["num_layers"])
+    parser.add_argument('--dropout_rate', type=float, default=config.HYPER_PARAMETERS["dropout_rate"])
+
+    # For CLI use, otherwise ignore as the defaults will handle it
+    parser.add_argument('--dataset_dir', type=str)
+    parser.add_argument('--model_dir', type=str)
+
+    # These arguments are dynamically calculated, usually you do not want to overwrite these
+    parser.add_argument('--num_batches_per_epoch', type=str)
     return parser.parse_args()
 
 
 if __name__ == '__main__':
+    """
+    To quickly iterate, you can run this via cli with `python3 -m deepar --dataset_dir ../out/datasets --model_dir ../out/local_cli/model`.
+    This assumes that you have a valid dataset, which can be created via the train notebook
+    """
     args = parse_args()
-    train(args.epochs, args.prediction_length, args.num_layers, args.dropout_rate)
+    if not args.dataset_dir:
+        args.dataset_dir = os.environ['SM_CHANNEL_DATASET']
+    if not args.model_dir:
+        args.model_dir = os.environ['SM_MODEL_DIR']
+
+    model_output_dir_path = Path(args.model_dir)
+    model_output_dir_path.mkdir(parents=True, exist_ok=True)
+
+    train(args)

@@ -19,7 +19,9 @@ CRYPTO_PAIR = "BTC/USDT"
 # https://docs.aws.amazon.com/sagemaker/latest/dg/deepar_hyperparameters.html
 _PROD_HYPER_PARAMETERS = {
     'epochs': 30,
-    'prediction_length': 15,
+    'batch_size': 32,
+    'context_length': 24,
+    'prediction_length': 12,
     'num_layers': 6,
     'dropout_rate': 0.184484
 }
@@ -27,8 +29,11 @@ _PROD_HYPER_PARAMETERS = {
 # Use these hyper parameters when developing and testing new features. The model will be less accurate, but these HPs
 # can be used to get a general idea of how well the model may perform with PROD HPs, without the longer wait time
 _MODERATE_HYPER_PARAMETERS = {
-    'epochs': 20,
-    'prediction_length': 15,
+    'epochs': 10,
+    'batch_size': 32,
+    'num_batches_per_epoch': 1000,
+    'context_length': 24,
+    'prediction_length': 12,
     'num_layers': 4,
     'dropout_rate': 0.1
 }
@@ -37,7 +42,10 @@ _MODERATE_HYPER_PARAMETERS = {
 # can be used to make sure the model compiles and runs, and to get a decent idea of performance
 _SIMPLE_HYPER_PARAMETERS = {
     'epochs': 1,
-    'prediction_length': 15,
+    'batch_size': 10,
+    'num_batches_per_epoch': 10,
+    'context_length': 22,
+    'prediction_length': 12,
     'num_layers': 1,
     'dropout_rate': 0.001
 }
