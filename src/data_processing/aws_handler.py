@@ -42,7 +42,7 @@ class AWSHandler:
 
         with open(local_file, 'rb') as data:
             self.s3_bucket_resource.put_object(Key=path, Body=data)
-            self.logger.log('Uploaded file to {}'.format(s3_path))
+            self.logger.log(f"Uploaded {dataset_channel_file} to {self.s3_dataset_dir_uri}")
 
     def download_model_from_s3(self, model_data_zip_path: str, local_artifact_dir: Path):
         # First download the compressed model

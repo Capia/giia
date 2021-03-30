@@ -36,13 +36,9 @@ source venv/bin/activate
 
 Then install the dependencies with:
 ```
+# Note that there are a few dependencies commented out inside the requirements.txt file. You need to install those 
+#  manually
 pip install -r ./src/requirements.txt
-```
-and
-```
-# Install this separately from the requirements file, which the reasoning is explained within it. You will need to have 
-#  the TA-Lib library installed on your machine 
-pip install freqtrade
 ```
 
 Finally, set the jupyter notebook to use the virtual environment:

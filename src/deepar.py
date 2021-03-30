@@ -3,6 +3,9 @@
 #  entry_point. Follow this issue for new developments https://github.com/aws/sagemaker-python-sdk/issues/1597
 #
 
+# !pip uninstall mxnet
+# !pip install mxnet-cu102
+
 import os
 import io
 
@@ -18,8 +21,10 @@ from gluonts.evaluation.backtest import make_evaluation_predictions
 from gluonts.evaluation import Evaluator
 from gluonts.model.predictor import Predictor
 from gluonts.model.forecast import Config, Forecast
-from gluonts.dataset.common import DataEntry, ListDataset, TimeZoneStrategy
+from gluonts.dataset.common import DataEntry, ListDataset
 from gluonts.mx.trainer import Trainer
+import mxnet as mx
+from mxnet.runtime import feature_list
 
 from utils import config
 
@@ -29,7 +34,7 @@ from utils import config
 
 # TODO: Should use https://gist.github.com/ehsanmok/b2c8fa6dbeea55860049414a16ddb3ff#file-lstnet-py-L41
 def train(model_args):
-    print(f"Using the follow arguments: [{model_args}]")
+    _describe_model(model_args)
 
     dataset_dir_path = Path(model_args.dataset_dir)
     train_dataset_path = dataset_dir_path / config.TRAIN_DATASET_FILENAME
@@ -37,7 +42,7 @@ def train(model_args):
 
     # Create train dataset
     df = pd.read_csv(filepath_or_buffer=train_dataset_path, header=0, index_col=0)
-    describe_df(df, train_dataset_path)
+    _describe_df(df, train_dataset_path)
 
     training_data = ListDataset(
         [{
@@ -46,7 +51,7 @@ def train(model_args):
             "open": df['open'][:],
             "high": df['high'][:],
             "low": df['low'][:],
-         }],
+        }],
         freq=config.DATASET_FREQ
     )
 
@@ -74,7 +79,7 @@ def train(model_args):
 
     # Create test dataset
     df = pd.read_csv(filepath_or_buffer=test_dataset_filename, header=0, index_col=0)
-    describe_df(df, test_dataset_filename)
+    _describe_df(df, test_dataset_filename)
 
     test_data = ListDataset(
         [{
@@ -217,12 +222,20 @@ def _output_fn(
     return bytes_results, content_type
 
 
-def describe_df(df, dataset_channel_file: str):
+def _describe_df(df, dataset_channel_file: str):
     print(f"First {dataset_channel_file} sample:")
     print(df.head(1))
     print(f"\nLast {dataset_channel_file} sample:")
     print(df.tail(1))
     print(df.describe())
+
+
+def _describe_model(model_args):
+    print(f"Using the follow arguments: [{model_args}]")
+
+    print(f"MXNet version [{mx.__version__}]")
+    print(f"Number of GPUs available [{mx.context.num_gpus()}]")
+    print(f"{feature_list()}")
 
 
 def parse_args():

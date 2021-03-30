@@ -23,8 +23,8 @@ class Train:
             entry_point='deepar.py',
             source_dir=os.getcwd(),
             role=role,
-            train_instance_type=instance_type,
-            train_instance_count=1,
+            instance_type=instance_type,
+            instance_count=1,
             framework_version='1.7.0',  # Should be the same mxnet X.X.X version found in requirements.txt
             py_version='py3',
             sagemaker_session=sagemaker_session,
@@ -56,7 +56,7 @@ class Train:
             'dropout_rate': config.HYPER_PARAMETERS['dropout_rate']
         }
 
-        if config.HYPER_PARAMETERS['num_batches_per_epoch']:
+        if "num_batches_per_epoch" in config.HYPER_PARAMETERS and config.HYPER_PARAMETERS['num_batches_per_epoch']:
             hp['num_batches_per_epoch'] = config.HYPER_PARAMETERS['num_batches_per_epoch']
 
         return hp

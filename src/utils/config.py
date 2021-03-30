@@ -31,7 +31,7 @@ _PROD_HYPER_PARAMETERS = {
 _MODERATE_HYPER_PARAMETERS = {
     'epochs': 10,
     'batch_size': 32,
-    'num_batches_per_epoch': 1000,
+    'num_batches_per_epoch': 50,
     'context_length': 24,
     'prediction_length': 12,
     'num_layers': 4,
@@ -44,7 +44,7 @@ _SIMPLE_HYPER_PARAMETERS = {
     'epochs': 1,
     'batch_size': 10,
     'num_batches_per_epoch': 10,
-    'context_length': 22,
+    'context_length': 12,
     'prediction_length': 12,
     'num_layers': 1,
     'dropout_rate': 0.001
