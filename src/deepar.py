@@ -3,9 +3,6 @@
 #  entry_point. Follow this issue for new developments https://github.com/aws/sagemaker-python-sdk/issues/1597
 #
 
-# !pip uninstall mxnet
-# !pip install mxnet-cu102
-
 import os
 import io
 
@@ -16,8 +13,11 @@ import numpy as np
 
 from typing import List, Tuple, Union
 from pathlib import Path
+
+from gluonts.dataset.field_names import FieldName
+from gluonts.dataset.split import OffsetSplitter
 from gluonts.model.deepar import DeepAREstimator
-from gluonts.evaluation.backtest import make_evaluation_predictions
+from gluonts.evaluation.backtest import backtest_metrics
 from gluonts.evaluation import Evaluator
 from gluonts.model.predictor import Predictor
 from gluonts.model.forecast import Config, Forecast
@@ -30,9 +30,7 @@ from utils import config
 
 
 # Creates a training and testing ListDataset, a DeepAR estimator, and performs the training. It also performs
-# evaluation and prints the MSE metric. This is necessary for the hyperparameter tuning later on.
-
-# TODO: Should use https://gist.github.com/ehsanmok/b2c8fa6dbeea55860049414a16ddb3ff#file-lstnet-py-L41
+# evaluation and prints performance metrics
 def train(model_args):
     _describe_model(model_args)
 
@@ -41,24 +39,24 @@ def train(model_args):
     test_dataset_filename = dataset_dir_path / config.TEST_DATASET_FILENAME
 
     # Create train dataset
-    df = pd.read_csv(filepath_or_buffer=train_dataset_path, header=0, index_col=0)
-    _describe_df(df, train_dataset_path)
+    df_train = pd.read_csv(filepath_or_buffer=train_dataset_path, header=0, index_col=0)
+    _describe_df(df_train, train_dataset_path)
 
-    training_data = ListDataset(
+    dataset_train = ListDataset(
         [{
-            "start": df.index[0],
-            "target": df['close'][:],
-            "open": df['open'][:],
-            "high": df['high'][:],
-            "low": df['low'][:],
+            FieldName.START: df_train.index[0],
+            FieldName.TARGET: df_train['close'][:],
+            # "open": df['open'][:],
+            # "high": df['high'][:],
+            # "low": df['low'][:],
         }],
         freq=config.DATASET_FREQ
     )
 
     if not model_args.num_batches_per_epoch:
-        model_args.num_batches_per_epoch = len(df) // model_args.batch_size
+        model_args.num_batches_per_epoch = len(df_train) // model_args.batch_size
         print(f"Defaulting num_batches_per_epoch to: [{model_args.num_batches_per_epoch}] "
-              f"= (length of train dataset [{len(df)}]) / (batch size [{model_args.batch_size}])")
+              f"= (length of train dataset [{len(df_train)}]) / (batch size [{model_args.batch_size}])")
 
     # Define DeepAR estimator
     estimator = DeepAREstimator(
@@ -67,6 +65,11 @@ def train(model_args):
         prediction_length=model_args.prediction_length,
         dropout_rate=model_args.dropout_rate,
         num_layers=model_args.num_layers,
+
+        # TODO: Determine the correct distribution method. This article goes over some of the key differences
+        # https://www.investopedia.com/articles/06/probabilitydistribution.asp
+        # distr_output=LogitNormalOutput(),
+
         trainer=Trainer(
             epochs=model_args.epochs,
             batch_size=model_args.batch_size,
@@ -75,38 +78,32 @@ def train(model_args):
     )
 
     # Train the model
-    predictor = estimator.train(training_data=training_data)
+    # TODO: 4 works for number of vCores, though this should be configurable.
+    predictor = estimator.train(training_data=dataset_train)
 
     # Create test dataset
-    df = pd.read_csv(filepath_or_buffer=test_dataset_filename, header=0, index_col=0)
-    _describe_df(df, test_dataset_filename)
+    df_test = pd.read_csv(filepath_or_buffer=test_dataset_filename, header=0, index_col=0)
+    _describe_df(df_test, test_dataset_filename)
 
-    test_data = ListDataset(
+    dataset_test = ListDataset(
         [{
-            "start": df.index[0],
-            "target": df['close'][:],
-            "open": df['open'][:],
-            "high": df['high'][:],
-            "low": df['low'][:],
+            "start": df_test.index[0],
+            "target": df_test['close'][:],
+            # "open": df_test['open'][:],
+            # "high": df_test['high'][:],
+            # "low": df_test['low'][:],
         }],
         freq=config.DATASET_FREQ
     )
 
-    # Evaluate trained model on test data
-    forecast_it, ts_it = make_evaluation_predictions(
-        dataset=test_data,  # test dataset
-        predictor=predictor,  # predictor
+    # Evaluate trained model on test data. This will serialize each of the agg_metrics into a well formatted log.
+    # We use this to capture the metrics needed for hyperparameter tuning
+    agg_metrics, item_metrics = backtest_metrics(
+        test_dataset=dataset_test,
+        predictor=predictor,
+        evaluator=Evaluator(quantiles=[0.1, 0.5, 0.9]),
         num_samples=100,  # number of samples used in probabilistic evaluation
     )
-
-    forecasts = list(forecast_it)
-    tss = list(ts_it)
-
-    evaluator = Evaluator(quantiles=[0.1, 0.5, 0.9])
-    agg_metrics, item_metrics = evaluator(iter(tss), iter(forecasts), num_series=len(test_data))
-
-    # Required for hyperparameter training, but also useful to debug model's performance
-    print(json.dumps(agg_metrics, indent=4))
 
     # Save the model
     predictor.serialize(Path(model_args.model_dir))
@@ -238,6 +235,34 @@ def _describe_model(model_args):
     print(f"{feature_list()}")
 
 
+def _vertical_split(df, offset_from_end):
+    """
+    Split a dataset time-wise in a train and validation dataset.
+    """
+    dataset = ListDataset(
+        [{
+            FieldName.START: df.index[0],
+            FieldName.TARGET: df['close'][:],
+            # "open": df['open'][:],
+            # "high": df['high'][:],
+            # "low": df['low'][:],
+        }],
+        freq=config.DATASET_FREQ
+    )
+
+    dataset_length = len(next(iter(dataset))["target"])
+
+    split_offset = dataset_length - offset_from_end
+
+    splitter = OffsetSplitter(
+        prediction_length=offset_from_end,
+        split_offset=split_offset,
+        max_history=offset_from_end)
+
+    (_, dataset_train), (_, dataset_validation) = splitter.split(dataset)
+    return dataset_train, dataset_validation
+
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--epochs', type=int, default=config.HYPER_PARAMETERS["epochs"])
@@ -246,13 +271,14 @@ def parse_args():
     parser.add_argument('--prediction_length', type=int, default=config.HYPER_PARAMETERS["prediction_length"])
     parser.add_argument('--num_layers', type=int, default=config.HYPER_PARAMETERS["num_layers"])
     parser.add_argument('--dropout_rate', type=float, default=config.HYPER_PARAMETERS["dropout_rate"])
+    parser.add_argument('--num_batches_per_epoch', type=float,
+                        default=config.HYPER_PARAMETERS["num_batches_per_epoch"]
+                        if "num_batches_per_epoch" in config.HYPER_PARAMETERS else None)
 
     # For CLI use, otherwise ignore as the defaults will handle it
     parser.add_argument('--dataset_dir', type=str)
     parser.add_argument('--model_dir', type=str)
 
-    # These arguments are dynamically calculated, usually you do not want to overwrite these
-    parser.add_argument('--num_batches_per_epoch', type=str)
     return parser.parse_args()
 
 

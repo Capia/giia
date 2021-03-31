@@ -18,8 +18,8 @@ CRYPTO_PAIR = "BTC/USDT"
 # If you permanently update these values, then you should also update the MODEL_VERSION
 # https://docs.aws.amazon.com/sagemaker/latest/dg/deepar_hyperparameters.html
 _PROD_HYPER_PARAMETERS = {
-    'epochs': 30,
-    'batch_size': 32,
+    'epochs': 20,
+    'batch_size': 1440,
     'context_length': 24,
     'prediction_length': 12,
     'num_layers': 6,
@@ -30,7 +30,7 @@ _PROD_HYPER_PARAMETERS = {
 # can be used to get a general idea of how well the model may perform with PROD HPs, without the longer wait time
 _MODERATE_HYPER_PARAMETERS = {
     'epochs': 10,
-    'batch_size': 32,
+    'batch_size': 144,
     'num_batches_per_epoch': 50,
     'context_length': 24,
     'prediction_length': 12,

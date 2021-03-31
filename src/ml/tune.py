@@ -26,7 +26,8 @@ class Tune:
         tuner = HyperparameterTuner(
             estimator=estimator,
             objective_metric_name='loss',
-            metric_definitions=[{'Name': 'loss', 'Regex': "\"MASE\": ([0-9\\.]+)"}],
+            objective_type='Minimize',
+            metric_definitions=[{'Name': 'loss', 'Regex': "gluonts[metric-MASE]: ([0-9\\.]+)"}],
             hyperparameter_ranges={
                 'epochs': self._get_range_for_hyperparameter(
                     'epochs', hp_allowed_max=1000),
@@ -38,8 +39,8 @@ class Tune:
                     'dropout_rate', hp_allowed_min=0.001, hp_allowed_max=0.2),
             },
             max_jobs=15,
-            max_parallel_jobs=3,
-            objective_type='Minimize')
+            max_parallel_jobs=3
+        )
         return tuner
 
     def fit_tuner(self, tuner: HyperparameterTuner, dataset_dir_uri: str):
