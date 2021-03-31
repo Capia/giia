@@ -28,16 +28,7 @@ class Tune:
             objective_metric_name='loss',
             objective_type='Minimize',
             metric_definitions=[{'Name': 'loss', 'Regex': "gluonts[metric-MASE]: ([0-9\\.]+)"}],
-            hyperparameter_ranges={
-                'epochs': self._get_range_for_hyperparameter(
-                    'epochs', hp_allowed_max=1000),
-                'prediction_length': self._get_range_for_hyperparameter(
-                    'prediction_length'),
-                'num_layers': self._get_range_for_hyperparameter(
-                    'num_layers', hp_range=5, hp_allowed_max=10),
-                'dropout_rate': self._get_range_for_hyperparameter(
-                    'dropout_rate', hp_allowed_min=0.001, hp_allowed_max=0.2),
-            },
+            hyperparameter_ranges=self._get_manual_hyperparameters(),
             max_jobs=15,
             max_parallel_jobs=3
         )
@@ -82,6 +73,28 @@ class Tune:
                 self.logger.log("No training jobs have reported valid results yet.")
 
         return df
+
+    def _get_calculated_hyperparameters(self):
+        return {
+            'epochs': self._get_range_for_hyperparameter(
+                'epochs', hp_allowed_max=1000),
+            'prediction_length': self._get_range_for_hyperparameter(
+                'prediction_length'),
+            'num_layers': self._get_range_for_hyperparameter(
+                'num_layers', hp_range=5, hp_allowed_max=10),
+            'dropout_rate': self._get_range_for_hyperparameter(
+                'dropout_rate', hp_allowed_min=0.001, hp_allowed_max=0.2),
+        }
+
+    def _get_manual_hyperparameters(self):
+        return {
+            'prediction_length': IntegerParameter(6, 24),
+            'context_length': IntegerParameter(6, 36),
+            'num_layers': IntegerParameter(4, 10),
+            'num_cells': IntegerParameter(40, 100),
+            'dropout_rate': ContinuousParameter(0.05, 0.25),
+            'learning_rate': ContinuousParameter(0.0005, 0.05)
+        }
 
     def _get_range_for_hyperparameter(self, hp_key, hp_range=None, hp_allowed_min=None, hp_allowed_max=None):
         """Best attempt to dynamically find a hyperparameter's range based on current tuned value"""

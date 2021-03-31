@@ -62,6 +62,7 @@ def train(model_args):
         prediction_length=model_args.prediction_length,
         dropout_rate=model_args.dropout_rate,
         num_layers=model_args.num_layers,
+        num_cells=model_args.num_cells,
 
         # TODO: Determine the correct distribution method. This article goes over some of the key differences
         # https://www.investopedia.com/articles/06/probabilitydistribution.asp
@@ -72,7 +73,8 @@ def train(model_args):
         trainer=Trainer(
             epochs=model_args.epochs,
             batch_size=model_args.batch_size,
-            num_batches_per_epoch=model_args.num_batches_per_epoch
+            num_batches_per_epoch=model_args.num_batches_per_epoch,
+            learning_rate=model_args.learning_rate
         )
     )
 
@@ -273,7 +275,9 @@ def parse_args():
     parser.add_argument('--context_length', type=int, default=config.HYPER_PARAMETERS["context_length"])
     parser.add_argument('--prediction_length', type=int, default=config.HYPER_PARAMETERS["prediction_length"])
     parser.add_argument('--num_layers', type=int, default=config.HYPER_PARAMETERS["num_layers"])
+    parser.add_argument('--num_cells', type=int, default=config.HYPER_PARAMETERS["num_cells"])
     parser.add_argument('--dropout_rate', type=float, default=config.HYPER_PARAMETERS["dropout_rate"])
+    parser.add_argument('--learning_rate', type=float, default=config.HYPER_PARAMETERS["learning_rate"])
     parser.add_argument('--num_batches_per_epoch', type=float,
                         default=config.HYPER_PARAMETERS["num_batches_per_epoch"]
                         if "num_batches_per_epoch" in config.HYPER_PARAMETERS else None)

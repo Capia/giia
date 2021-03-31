@@ -32,7 +32,6 @@ class Train:
             # TODO
             # enable_sagemaker_metrics=True,
 
-            # TODO: learning_rate, hidden_channels
             hyperparameters=self._get_hyperparameters(),
             **kwargs
         )
@@ -53,7 +52,9 @@ class Train:
             'context_length': config.HYPER_PARAMETERS['context_length'],
             'prediction_length': config.HYPER_PARAMETERS['prediction_length'],
             'num_layers': config.HYPER_PARAMETERS['num_layers'],
-            'dropout_rate': config.HYPER_PARAMETERS['dropout_rate']
+            'num_cells': config.HYPER_PARAMETERS['num_cells'],
+            'dropout_rate': config.HYPER_PARAMETERS['dropout_rate'],
+            'learning_rate': config.HYPER_PARAMETERS['learning_rate'],
         }
 
         if "num_batches_per_epoch" in config.HYPER_PARAMETERS and config.HYPER_PARAMETERS['num_batches_per_epoch']:

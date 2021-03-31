@@ -18,12 +18,14 @@ CRYPTO_PAIR = "BTC/USDT"
 # If you permanently update these values, then you should also update the MODEL_VERSION
 # https://docs.aws.amazon.com/sagemaker/latest/dg/deepar_hyperparameters.html
 _PROD_HYPER_PARAMETERS = {
-    'epochs': 20,
+    'epochs': 10,
     'batch_size': 1440,
     'context_length': 24,
     'prediction_length': 12,
     'num_layers': 6,
-    'dropout_rate': 0.184484
+    'num_cells': 40,
+    'dropout_rate': 0.184484,
+    'learning_rate': 0.001
 }
 
 # Use these hyper parameters when developing and testing new features. The model will be less accurate, but these HPs
@@ -35,7 +37,9 @@ _MODERATE_HYPER_PARAMETERS = {
     'context_length': 24,
     'prediction_length': 24,
     'num_layers': 4,
-    'dropout_rate': 0.18
+    'num_cells': 40,
+    'dropout_rate': 0.18,
+    'learning_rate': 0.001
 }
 
 # Use these hyper parameters when developing and need to quickly iterate. The model will not be accurate, but these HPs
@@ -47,9 +51,11 @@ _SIMPLE_HYPER_PARAMETERS = {
     'context_length': 12,
     'prediction_length': 12,
     'num_layers': 1,
-    'dropout_rate': 0.001
+    'num_cells': 20,
+    'dropout_rate': 0.01,
+    'learning_rate': 0.001
 }
 
 # DO NOT COMMIT ANY CHANGES TO THIS CONFIG `HYPER_PARAMETERS = _PROD_HYPER_PARAMETERS`. You can change it for testing,
 # just do not commit it
-HYPER_PARAMETERS = _MODERATE_HYPER_PARAMETERS
+HYPER_PARAMETERS = _PROD_HYPER_PARAMETERS
