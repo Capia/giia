@@ -33,9 +33,9 @@ _MODERATE_HYPER_PARAMETERS = {
     'batch_size': 144,
     'num_batches_per_epoch': 50,
     'context_length': 24,
-    'prediction_length': 12,
+    'prediction_length': 24,
     'num_layers': 4,
-    'dropout_rate': 0.1
+    'dropout_rate': 0.18
 }
 
 # Use these hyper parameters when developing and need to quickly iterate. The model will not be accurate, but these HPs
@@ -52,4 +52,4 @@ _SIMPLE_HYPER_PARAMETERS = {
 
 # DO NOT COMMIT ANY CHANGES TO THIS CONFIG `HYPER_PARAMETERS = _PROD_HYPER_PARAMETERS`. You can change it for testing,
 # just do not commit it
-HYPER_PARAMETERS = _PROD_HYPER_PARAMETERS
+HYPER_PARAMETERS = _MODERATE_HYPER_PARAMETERS

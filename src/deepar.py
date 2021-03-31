@@ -16,12 +16,14 @@ from pathlib import Path
 
 from gluonts.dataset.field_names import FieldName
 from gluonts.dataset.split import OffsetSplitter
+from gluonts.dataset.stat import calculate_dataset_statistics
 from gluonts.model.deepar import DeepAREstimator
 from gluonts.evaluation.backtest import backtest_metrics
 from gluonts.evaluation import Evaluator
 from gluonts.model.predictor import Predictor
 from gluonts.model.forecast import Config, Forecast
 from gluonts.dataset.common import DataEntry, ListDataset
+from gluonts.mx.distribution import LogitNormalOutput, PoissonOutput
 from gluonts.mx.trainer import Trainer
 import mxnet as mx
 from mxnet.runtime import feature_list
@@ -39,24 +41,19 @@ def train(model_args):
     test_dataset_filename = dataset_dir_path / config.TEST_DATASET_FILENAME
 
     # Create train dataset
-    df_train = pd.read_csv(filepath_or_buffer=train_dataset_path, header=0, index_col=0)
-    _describe_df(df_train, train_dataset_path)
+    train_df = _get_df_from_dataset_file(train_dataset_path)
 
-    dataset_train = ListDataset(
-        [{
-            FieldName.START: df_train.index[0],
-            FieldName.TARGET: df_train['close'][:],
-            # "open": df['open'][:],
-            # "high": df['high'][:],
-            # "low": df['low'][:],
-        }],
-        freq=config.DATASET_FREQ
-    )
+    train_dataset, validation_dataset = _vertical_split(
+        train_df, 2 * (model_args.context_length + model_args.prediction_length))
+    train_statistics = calculate_dataset_statistics(train_dataset)
+    validation_statistics = calculate_dataset_statistics(validation_dataset)
+    print(f"Train dataset stats: {train_statistics}")
+    print(f"Validation dataset stats: {validation_statistics}")
 
     if not model_args.num_batches_per_epoch:
-        model_args.num_batches_per_epoch = len(df_train) // model_args.batch_size
+        model_args.num_batches_per_epoch = len(train_df) // model_args.batch_size
         print(f"Defaulting num_batches_per_epoch to: [{model_args.num_batches_per_epoch}] "
-              f"= (length of train dataset [{len(df_train)}]) / (batch size [{model_args.batch_size}])")
+              f"= (length of train dataset [{len(train_df)}]) / (batch size [{model_args.batch_size}])")
 
     # Define DeepAR estimator
     estimator = DeepAREstimator(
@@ -68,7 +65,9 @@ def train(model_args):
 
         # TODO: Determine the correct distribution method. This article goes over some of the key differences
         # https://www.investopedia.com/articles/06/probabilitydistribution.asp
-        # distr_output=LogitNormalOutput(),
+        # distr_output=PoissonOutput(),
+
+        use_feat_dynamic_real=True,
 
         trainer=Trainer(
             epochs=model_args.epochs,
@@ -78,20 +77,21 @@ def train(model_args):
     )
 
     # Train the model
-    # TODO: 4 works for number of vCores, though this should be configurable.
-    predictor = estimator.train(training_data=dataset_train)
+    # TODO: 4 workers for number of vCores, though this should be configurable.
+    predictor = estimator.train(
+        training_data=train_dataset,
+        validation_data=validation_dataset
+    )
 
     # Create test dataset
-    df_test = pd.read_csv(filepath_or_buffer=test_dataset_filename, header=0, index_col=0)
-    _describe_df(df_test, test_dataset_filename)
+    test_df = _get_df_from_dataset_file(test_dataset_filename)
 
-    dataset_test = ListDataset(
+    test_dataset = ListDataset(
         [{
-            "start": df_test.index[0],
-            "target": df_test['close'][:],
-            # "open": df_test['open'][:],
-            # "high": df_test['high'][:],
-            # "low": df_test['low'][:],
+            FieldName.START: test_df.index[0],
+            FieldName.TARGET: test_df['close'][:],
+            FieldName.FEAT_DYNAMIC_REAL: [test_df['open'][:], test_df['high'][:], test_df['low'][:]],
+            FieldName.ITEM_ID: "BTC/USDT",
         }],
         freq=config.DATASET_FREQ
     )
@@ -99,7 +99,7 @@ def train(model_args):
     # Evaluate trained model on test data. This will serialize each of the agg_metrics into a well formatted log.
     # We use this to capture the metrics needed for hyperparameter tuning
     agg_metrics, item_metrics = backtest_metrics(
-        test_dataset=dataset_test,
+        test_dataset=test_dataset,
         predictor=predictor,
         evaluator=Evaluator(quantiles=[0.1, 0.5, 0.9]),
         num_samples=100,  # number of samples used in probabilistic evaluation
@@ -219,20 +219,24 @@ def _output_fn(
     return bytes_results, content_type
 
 
-def _describe_df(df, dataset_channel_file: str):
-    print(f"First {dataset_channel_file} sample:")
-    print(df.head(1))
-    print(f"\nLast {dataset_channel_file} sample:")
-    print(df.tail(1))
-    print(df.describe())
-
-
 def _describe_model(model_args):
     print(f"Using the follow arguments: [{model_args}]")
 
     print(f"MXNet version [{mx.__version__}]")
     print(f"Number of GPUs available [{mx.context.num_gpus()}]")
     print(f"{feature_list()}")
+
+
+def _get_df_from_dataset_file(dataset_path: Path):
+    df = pd.read_csv(filepath_or_buffer=dataset_path, header=0, index_col=0)
+
+    print(f"First {dataset_path} sample:")
+    print(df.head(1))
+    print(f"\nLast {dataset_path} sample:")
+    print(df.tail(1))
+    print(df.describe())
+
+    return df
 
 
 def _vertical_split(df, offset_from_end):
@@ -243,9 +247,8 @@ def _vertical_split(df, offset_from_end):
         [{
             FieldName.START: df.index[0],
             FieldName.TARGET: df['close'][:],
-            # "open": df['open'][:],
-            # "high": df['high'][:],
-            # "low": df['low'][:],
+            FieldName.FEAT_DYNAMIC_REAL: [df['open'][:], df['high'][:], df['low'][:]],
+            FieldName.ITEM_ID: "BTC/USDT",
         }],
         freq=config.DATASET_FREQ
     )
@@ -259,8 +262,8 @@ def _vertical_split(df, offset_from_end):
         split_offset=split_offset,
         max_history=offset_from_end)
 
-    (_, dataset_train), (_, dataset_validation) = splitter.split(dataset)
-    return dataset_train, dataset_validation
+    (_, train_dataset), (_, validation_dataset) = splitter.split(dataset)
+    return train_dataset, validation_dataset
 
 
 def parse_args():
