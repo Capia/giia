@@ -48,10 +48,22 @@ class Parse:
         test.to_csv(dataset_dir_path / config.TEST_DATASET_FILENAME)
         self.logger.log(f"Parsed train and test datasets can be found in [{dataset_dir_path}]", 'debug')
 
-    def _marshal_candles(self, candles: DataFrame):
+    def _marshal_candles(self, candles: DataFrame) -> DataFrame:
         # Index by datetime
         df = candles.set_index('date')
 
         # Then remove UTC timezone since GluonTS does not work with it
         df.index = df.index.tz_localize(None)
+
+        # Shift features down one timeframe and pad. This will make the model predict the next target value based
+        # on candles from a time frame's previous time frame.
+        # df['open'] = df['open'].shift(1)
+        # df['high'] = df['high'].shift(1)
+        # df['low'] = df['low'].shift(1)
+        # df['volume'] = df['volume'].shift(1)
+        # df = df[1:]
+
         return df
+
+    def _engineer_features(self):
+        pass

@@ -15,11 +15,14 @@ from typing import List, Tuple, Union
 from pathlib import Path
 
 from gluonts.dataset.field_names import FieldName
+from gluonts.dataset.multivariate_grouper import MultivariateGrouper
 from gluonts.dataset.split import OffsetSplitter
 from gluonts.dataset.stat import calculate_dataset_statistics
-from gluonts.model.deepar import DeepAREstimator
-from gluonts.evaluation.backtest import backtest_metrics
-from gluonts.evaluation import Evaluator
+from gluonts.evaluation.backtest import backtest_metrics, make_evaluation_predictions
+from gluonts.evaluation import Evaluator, MultivariateEvaluator
+from gluonts.model.deepvar import DeepVAREstimator
+from gluonts.model.gpvar import GPVAREstimator
+from gluonts.model.lstnet import LSTNetEstimator
 from gluonts.model.predictor import Predictor
 from gluonts.model.forecast import Config, Forecast
 from gluonts.dataset.common import DataEntry, ListDataset
@@ -43,62 +46,78 @@ def train(model_args):
     # Create train dataset
     train_df = _get_df_from_dataset_file(train_dataset_path)
 
-    train_dataset, validation_dataset = _vertical_split(
-        train_df, model_args.context_length, model_args.prediction_length)
-    train_statistics = calculate_dataset_statistics(train_dataset)
-    validation_statistics = calculate_dataset_statistics(validation_dataset)
-    print(f"Train dataset stats: {train_statistics}")
-    print(f"Validation dataset stats: {validation_statistics}")
+    # train_dataset, validation_dataset = _vertical_split(
+    train_dataset = _vertical_split(
+        train_df, model_args.prediction_length)
+    # train_statistics = calculate_dataset_statistics(train_dataset)
+    # validation_statistics = calculate_dataset_statistics(validation_dataset)
+    # print(f"Train dataset stats: {train_statistics}")
+    # print(f"Validation dataset stats: {validation_statistics}")
 
     if not model_args.num_batches_per_epoch:
         model_args.num_batches_per_epoch = len(train_df) // model_args.batch_size
         print(f"Defaulting num_batches_per_epoch to: [{model_args.num_batches_per_epoch}] "
               f"= (length of train dataset [{len(train_df)}]) / (batch size [{model_args.batch_size}])")
 
-    estimator = DeepAREstimator(
+    estimator = LSTNetEstimator(
         freq=config.DATASET_FREQ,
-        batch_size=model_args.batch_size,
         context_length=model_args.context_length,
         prediction_length=model_args.prediction_length,
-        dropout_rate=model_args.dropout_rate,
-        num_layers=model_args.num_layers,
-        num_cells=model_args.num_cells,
+        # target_dim=4,
+        # dropout_rate=model_args.dropout_rate,
+        # num_layers=model_args.num_layers,
+        # num_cells=model_args.num_cells,
+        batch_size=model_args.batch_size,
 
-        # dropoutcell_type='VariationalDropoutCell',
-        use_feat_dynamic_real=True,
+        num_series=1,
+        skip_size=9,
+        ar_window=18,
+        channels=90,
+        rnn_num_layers=90, skip_rnn_num_layers=9,
+
+        # TODO: Determine the correct distribution method. This article goes over some of the key differences
+        # https://www.investopedia.com/articles/06/probabilitydistribution.asp
+        # distr_output=PoissonOutput(),
 
         trainer=Trainer(
             epochs=model_args.epochs,
             batch_size=model_args.batch_size,
             num_batches_per_epoch=model_args.num_batches_per_epoch,
-            learning_rate=model_args.learning_rate
+            # learning_rate=model_args.learning_rate
         )
     )
 
     # Train the model
+    # TODO: 4 workers for number of vCores, though this should be configurable.
     predictor = estimator.train(
         training_data=train_dataset,
-        validation_data=validation_dataset,
-        num_workers=4
+        # validation_data=validation_dataset
     )
 
     # Create test dataset
     test_df = _get_df_from_dataset_file(test_dataset_filename)
 
+    # test_dataset = ListDataset(
+    #     [{
+    #         FieldName.START: test_df.index[0],
+    #         FieldName.TARGET: [test_df['close'][:], test_df['open'][:], test_df['high'][:], test_df['low'][:]],
+    #         FieldName.ITEM_ID: "BTC/USDT",
+    #     }],
+    #     freq=config.DATASET_FREQ,
+    #     one_dim_target=False
+    # )
+
     test_dataset = ListDataset(
         [{
             FieldName.START: test_df.index[0],
             FieldName.TARGET: test_df['close'][:],
-            # FieldName.FEAT_DYNAMIC_REAL: [
-            #     test_df['open'][:],
-            #     test_df['high'][:],
-            #     test_df['low'][:],
-            #     test_df['volume'][:]
-            # ],
+            FieldName.FEAT_DYNAMIC_REAL: [test_df['open'][:], test_df['high'][:], test_df['low'][:], test_df['volume'][:]],
             FieldName.ITEM_ID: "BTC/USDT",
         }],
         freq=config.DATASET_FREQ
     )
+    grouper_test = MultivariateGrouper(max_target_dim=1)
+    test_dataset = grouper_test(test_dataset)
 
     # Evaluate trained model on test data. This will serialize each of the agg_metrics into a well formatted log.
     # We use this to capture the metrics needed for hyperparameter tuning
@@ -108,6 +127,15 @@ def train(model_args):
         evaluator=Evaluator(quantiles=[0.1, 0.5, 0.9]),
         num_samples=100,  # number of samples used in probabilistic evaluation
     )
+
+    # forecast_it, ts_it = make_evaluation_predictions(
+    #     test_dataset, predictor=predictor, num_samples=100
+    # )
+    #
+    # evaluator=Evaluator(quantiles=[0.1, 0.5, 0.9])
+    # agg_metrics, item_metrics = evaluator(
+    #     ts_it, forecast_it, num_series=12
+    # )
 
     # Save the model
     predictor.serialize(Path(model_args.model_dir))
@@ -243,38 +271,89 @@ def _get_df_from_dataset_file(dataset_path: Path):
     return df
 
 
-def _vertical_split(df, context_length, prediction_length):
+def _vertical_split(df, offset_from_end):
     """
     Split a dataset time-wise in a train and validation dataset.
     """
-    offset_from_end = 2 * (context_length + prediction_length)
+    # # This works, but we don't want to predict multiple targets
+    # dataset = ListDataset(
+    #     [{
+    #         FieldName.START: df.index[0],
+    #         FieldName.TARGET: [df['close'][:-offset_from_end], df['open'][:-offset_from_end], df['high'][:-offset_from_end], df['low'][:-offset_from_end]],
+    #         FieldName.ITEM_ID: "BTC/USDT",
+    #     }],
+    #     freq=config.DATASET_FREQ,
+    #     one_dim_target=False
+    # )
 
     dataset = ListDataset(
         [{
             FieldName.START: df.index[0],
-            FieldName.TARGET: df['close'][:-prediction_length].values,
-            FieldName.FEAT_DYNAMIC_REAL: [
-                df['open'][:-prediction_length].values,
-                df['high'][:-prediction_length].values,
-                df['low'][:-prediction_length].values,
-                df['volume'][:-prediction_length].values
-            ],
+            FieldName.TARGET: df['close'][:],
+            FieldName.FEAT_DYNAMIC_REAL: [df['open'][:], df['high'][:], df['low'][:], df['volume'][:]],
             FieldName.ITEM_ID: "BTC/USDT",
         }],
         freq=config.DATASET_FREQ
     )
 
-    dataset_length = len(next(iter(dataset))["target"])
+    # print([
+    #     {
+    #         FieldName.START: df.index[0],
+    #         FieldName.TARGET: df['close'][:-offset_from_end],
+    #     },
+    #     {
+    #         FieldName.START: df.index[0],
+    #         FieldName.TARGET: df['open'][:-offset_from_end],
+    #     },
+    #     {
+    #         FieldName.START: df.index[0],
+    #         FieldName.TARGET: df['high'][:-offset_from_end],
+    #     },
+    #     {
+    #         FieldName.START: df.index[0],
+    #         FieldName.TARGET: df['low'][:-offset_from_end],
+    #     },
+    # ])
+    # dataset = ListDataset(
+    #     [
+    #         {
+    #             FieldName.START: df.index[0],
+    #             FieldName.TARGET: df['close'][:-offset_from_end],
+    #         },
+    #         {
+    #             FieldName.START: df.index[0],
+    #             FieldName.TARGET: df['open'][:-offset_from_end],
+    #         },
+    #         {
+    #             FieldName.START: df.index[0],
+    #             FieldName.TARGET: df['high'][:-offset_from_end],
+    #         },
+    #         {
+    #             FieldName.START: df.index[0],
+    #             FieldName.TARGET: df['low'][:-offset_from_end],
+    #         },
+    #     ],
+    #     freq=config.DATASET_FREQ,
+    #     # one_dim_target=False
+    # )
 
-    split_offset = dataset_length - offset_from_end
+    # dataset_length = len(next(iter(dataset))["target"])
+    #
+    # split_offset = dataset_length - offset_from_end
+    #
+    # splitter = OffsetSplitter(
+    #     prediction_length=offset_from_end,
+    #     split_offset=split_offset,
+    #     max_history=offset_from_end)
+    #
+    # (_, train_dataset), (_, validation_dataset) = splitter.split(dataset)
+    # return train_dataset, validation_dataset
 
-    splitter = OffsetSplitter(
-        prediction_length=offset_from_end,
-        split_offset=split_offset,
-        max_history=offset_from_end)
+    from gluonts.dataset.multivariate_grouper import MultivariateGrouper
+    grouper_train = MultivariateGrouper(max_target_dim=1)
 
-    (_, train_dataset), (_, validation_dataset) = splitter.split(dataset)
-    return train_dataset, validation_dataset
+    dataset = grouper_train(dataset)
+    return dataset
 
 
 def parse_args():

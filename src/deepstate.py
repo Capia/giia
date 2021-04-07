@@ -17,13 +17,12 @@ from pathlib import Path
 from gluonts.dataset.field_names import FieldName
 from gluonts.dataset.split import OffsetSplitter
 from gluonts.dataset.stat import calculate_dataset_statistics
-from gluonts.model.deepar import DeepAREstimator
 from gluonts.evaluation.backtest import backtest_metrics
 from gluonts.evaluation import Evaluator
+from gluonts.model.deepstate import DeepStateEstimator
 from gluonts.model.predictor import Predictor
 from gluonts.model.forecast import Config, Forecast
 from gluonts.dataset.common import DataEntry, ListDataset
-from gluonts.mx.distribution import LogitNormalOutput, PoissonOutput
 from gluonts.mx.trainer import Trainer
 import mxnet as mx
 from mxnet.runtime import feature_list
@@ -44,7 +43,7 @@ def train(model_args):
     train_df = _get_df_from_dataset_file(train_dataset_path)
 
     train_dataset, validation_dataset = _vertical_split(
-        train_df, model_args.context_length, model_args.prediction_length)
+        train_df, model_args.past_length, model_args.prediction_length)
     train_statistics = calculate_dataset_statistics(train_dataset)
     validation_statistics = calculate_dataset_statistics(validation_dataset)
     print(f"Train dataset stats: {train_statistics}")
@@ -55,19 +54,29 @@ def train(model_args):
         print(f"Defaulting num_batches_per_epoch to: [{model_args.num_batches_per_epoch}] "
               f"= (length of train dataset [{len(train_df)}]) / (batch size [{model_args.batch_size}])")
 
-    estimator = DeepAREstimator(
+    if mx.context.num_gpus():
+        ctx = mx.gpu()
+        print("Using GPU context")
+    else:
+        ctx = mx.cpu()
+        print("Using CPU context")
+
+    estimator = DeepStateEstimator(
         freq=config.DATASET_FREQ,
         batch_size=model_args.batch_size,
-        context_length=model_args.context_length,
         prediction_length=model_args.prediction_length,
+        past_length=model_args.past_length,  # 288 periods * 5 minute periods = 1440 minutes / 24 hours
+        # 5 minute periods * 12 periods per hour  * 4 hours = 240 periods
+
         dropout_rate=model_args.dropout_rate,
         num_layers=model_args.num_layers,
         num_cells=model_args.num_cells,
 
-        # dropoutcell_type='VariationalDropoutCell',
-        use_feat_dynamic_real=True,
+        use_feat_static_cat=True,
+        cardinality=[5],
 
         trainer=Trainer(
+            ctx=ctx,
             epochs=model_args.epochs,
             batch_size=model_args.batch_size,
             num_batches_per_epoch=model_args.num_batches_per_epoch,
@@ -79,7 +88,7 @@ def train(model_args):
     predictor = estimator.train(
         training_data=train_dataset,
         validation_data=validation_dataset,
-        num_workers=4
+        # num_workers=4
     )
 
     # Create test dataset
@@ -88,14 +97,9 @@ def train(model_args):
     test_dataset = ListDataset(
         [{
             FieldName.START: test_df.index[0],
-            FieldName.TARGET: test_df['close'][:],
-            # FieldName.FEAT_DYNAMIC_REAL: [
-            #     test_df['open'][:],
-            #     test_df['high'][:],
-            #     test_df['low'][:],
-            #     test_df['volume'][:]
-            # ],
-            FieldName.ITEM_ID: "BTC/USDT",
+            FieldName.TARGET: test_df['close'][:].values,
+            FieldName.ITEM_ID: "close",
+            FieldName.FEAT_STATIC_CAT: np.array([0]),
         }],
         freq=config.DATASET_FREQ
     )
@@ -243,24 +247,45 @@ def _get_df_from_dataset_file(dataset_path: Path):
     return df
 
 
-def _vertical_split(df, context_length, prediction_length):
+def _vertical_split(df, past_length, prediction_length):
     """
     Split a dataset time-wise in a train and validation dataset.
     """
-    offset_from_end = 2 * (context_length + prediction_length)
+    offset_from_end = 2 * (past_length + prediction_length)
 
     dataset = ListDataset(
-        [{
-            FieldName.START: df.index[0],
-            FieldName.TARGET: df['close'][:-prediction_length].values,
-            FieldName.FEAT_DYNAMIC_REAL: [
-                df['open'][:-prediction_length].values,
-                df['high'][:-prediction_length].values,
-                df['low'][:-prediction_length].values,
-                df['volume'][:-prediction_length].values
-            ],
-            FieldName.ITEM_ID: "BTC/USDT",
-        }],
+        [
+            {
+                FieldName.START: df.index[0],
+                FieldName.TARGET: df['close'][:-prediction_length].values,
+                FieldName.ITEM_ID: "close",
+                FieldName.FEAT_STATIC_CAT: np.array([0]),
+            },
+            {
+                FieldName.START: df.index[0],
+                FieldName.TARGET: df['open'][:-prediction_length].values,
+                FieldName.ITEM_ID: "open",
+                FieldName.FEAT_STATIC_CAT: np.array([1]),
+            },
+            {
+                FieldName.START: df.index[0],
+                FieldName.TARGET: df['high'][:-prediction_length].values,
+                FieldName.ITEM_ID: "high",
+                FieldName.FEAT_STATIC_CAT: np.array([2]),
+            },
+            {
+                FieldName.START: df.index[0],
+                FieldName.TARGET: df['low'][:-prediction_length].values,
+                FieldName.ITEM_ID: "low",
+                FieldName.FEAT_STATIC_CAT: np.array([3]),
+            },
+            {
+                FieldName.START: df.index[0],
+                FieldName.TARGET: df['volume'][:-prediction_length],
+                FieldName.ITEM_ID: "volume",
+                FieldName.FEAT_STATIC_CAT: np.array([4]),
+            },
+        ],
         freq=config.DATASET_FREQ
     )
 
@@ -281,8 +306,8 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--epochs', type=int, default=config.HYPER_PARAMETERS["epochs"])
     parser.add_argument('--batch_size', type=int, default=config.HYPER_PARAMETERS["batch_size"])
-    parser.add_argument('--context_length', type=int, default=config.HYPER_PARAMETERS["context_length"])
     parser.add_argument('--prediction_length', type=int, default=config.HYPER_PARAMETERS["prediction_length"])
+    parser.add_argument('--past_length', type=int, default=config.HYPER_PARAMETERS["past_length"])
     parser.add_argument('--num_layers', type=int, default=config.HYPER_PARAMETERS["num_layers"])
     parser.add_argument('--num_cells', type=int, default=config.HYPER_PARAMETERS["num_cells"])
     parser.add_argument('--dropout_rate', type=float, default=config.HYPER_PARAMETERS["dropout_rate"])

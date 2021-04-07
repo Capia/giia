@@ -17,12 +17,12 @@ from pathlib import Path
 from gluonts.dataset.field_names import FieldName
 from gluonts.dataset.split import OffsetSplitter
 from gluonts.dataset.stat import calculate_dataset_statistics
-from gluonts.model.deepar import DeepAREstimator
 from gluonts.evaluation.backtest import backtest_metrics
 from gluonts.evaluation import Evaluator
 from gluonts.model.predictor import Predictor
 from gluonts.model.forecast import Config, Forecast
 from gluonts.dataset.common import DataEntry, ListDataset
+from gluonts.model.simple_feedforward import SimpleFeedForwardEstimator
 from gluonts.mx.distribution import LogitNormalOutput, PoissonOutput
 from gluonts.mx.trainer import Trainer
 import mxnet as mx
@@ -44,7 +44,7 @@ def train(model_args):
     train_df = _get_df_from_dataset_file(train_dataset_path)
 
     train_dataset, validation_dataset = _vertical_split(
-        train_df, model_args.context_length, model_args.prediction_length)
+        train_df, 2 * (model_args.context_length + model_args.prediction_length))
     train_statistics = calculate_dataset_statistics(train_dataset)
     validation_statistics = calculate_dataset_statistics(validation_dataset)
     print(f"Train dataset stats: {train_statistics}")
@@ -55,16 +55,18 @@ def train(model_args):
         print(f"Defaulting num_batches_per_epoch to: [{model_args.num_batches_per_epoch}] "
               f"= (length of train dataset [{len(train_df)}]) / (batch size [{model_args.batch_size}])")
 
-    estimator = DeepAREstimator(
+    estimator = SimpleFeedForwardEstimator(
         freq=config.DATASET_FREQ,
-        batch_size=model_args.batch_size,
         context_length=model_args.context_length,
         prediction_length=model_args.prediction_length,
         dropout_rate=model_args.dropout_rate,
         num_layers=model_args.num_layers,
         num_cells=model_args.num_cells,
 
-        # dropoutcell_type='VariationalDropoutCell',
+        # TODO: Determine the correct distribution method. This article goes over some of the key differences
+        # https://www.investopedia.com/articles/06/probabilitydistribution.asp
+        # distr_output=PoissonOutput(),
+
         use_feat_dynamic_real=True,
 
         trainer=Trainer(
@@ -76,10 +78,10 @@ def train(model_args):
     )
 
     # Train the model
+    # TODO: 4 workers for number of vCores, though this should be configurable.
     predictor = estimator.train(
         training_data=train_dataset,
-        validation_data=validation_dataset,
-        num_workers=4
+        validation_data=validation_dataset
     )
 
     # Create test dataset
@@ -89,12 +91,7 @@ def train(model_args):
         [{
             FieldName.START: test_df.index[0],
             FieldName.TARGET: test_df['close'][:],
-            # FieldName.FEAT_DYNAMIC_REAL: [
-            #     test_df['open'][:],
-            #     test_df['high'][:],
-            #     test_df['low'][:],
-            #     test_df['volume'][:]
-            # ],
+            FieldName.FEAT_DYNAMIC_REAL: [test_df['open'][:], test_df['high'][:], test_df['low'][:]],
             FieldName.ITEM_ID: "BTC/USDT",
         }],
         freq=config.DATASET_FREQ
@@ -243,22 +240,15 @@ def _get_df_from_dataset_file(dataset_path: Path):
     return df
 
 
-def _vertical_split(df, context_length, prediction_length):
+def _vertical_split(df, offset_from_end):
     """
     Split a dataset time-wise in a train and validation dataset.
     """
-    offset_from_end = 2 * (context_length + prediction_length)
-
     dataset = ListDataset(
         [{
             FieldName.START: df.index[0],
-            FieldName.TARGET: df['close'][:-prediction_length].values,
-            FieldName.FEAT_DYNAMIC_REAL: [
-                df['open'][:-prediction_length].values,
-                df['high'][:-prediction_length].values,
-                df['low'][:-prediction_length].values,
-                df['volume'][:-prediction_length].values
-            ],
+            FieldName.TARGET: df['close'][:],
+            FieldName.FEAT_DYNAMIC_REAL: [df['open'][:], df['high'][:], df['low'][:]],
             FieldName.ITEM_ID: "BTC/USDT",
         }],
         freq=config.DATASET_FREQ

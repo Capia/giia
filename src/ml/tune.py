@@ -27,10 +27,10 @@ class Tune:
             estimator=estimator,
             objective_metric_name='loss',
             objective_type='Minimize',
-            metric_definitions=[{'Name': 'loss', 'Regex': "gluonts[metric-MASE]: ([0-9\\.]+)"}],
+            metric_definitions=[{'Name': 'loss', 'Regex': "gluonts\\[metric-MASE\\]: ([0-9\\.]+)"}],
             hyperparameter_ranges=self._get_manual_hyperparameters(),
             max_jobs=15,
-            max_parallel_jobs=3
+            max_parallel_jobs=1
         )
         return tuner
 
@@ -88,11 +88,9 @@ class Tune:
 
     def _get_manual_hyperparameters(self):
         return {
-            'prediction_length': IntegerParameter(6, 24),
-            'context_length': IntegerParameter(6, 36),
-            'num_layers': IntegerParameter(4, 10),
+            'num_layers': IntegerParameter(2, 8),
             'num_cells': IntegerParameter(40, 100),
-            'dropout_rate': ContinuousParameter(0.05, 0.25),
+            'dropout_rate': ContinuousParameter(0.05, 0.20),
             'learning_rate': ContinuousParameter(0.0005, 0.05)
         }
 
