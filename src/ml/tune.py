@@ -88,10 +88,10 @@ class Tune:
 
     def _get_manual_hyperparameters(self):
         return {
-            'num_layers': IntegerParameter(2, 8),
-            'num_cells': IntegerParameter(40, 100),
+            'num_layers': IntegerParameter(4, 10),
+            'num_cells': IntegerParameter(60, 120),
             'dropout_rate': ContinuousParameter(0.05, 0.20),
-            'learning_rate': ContinuousParameter(0.0005, 0.05)
+            'learning_rate': ContinuousParameter(0.0005, 0.01)
         }
 
     def _get_range_for_hyperparameter(self, hp_key, hp_range=None, hp_allowed_min=None, hp_allowed_max=None):

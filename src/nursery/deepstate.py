@@ -17,13 +17,12 @@ from pathlib import Path
 from gluonts.dataset.field_names import FieldName
 from gluonts.dataset.split import OffsetSplitter
 from gluonts.dataset.stat import calculate_dataset_statistics
-from gluonts.model.deepar import DeepAREstimator
 from gluonts.evaluation.backtest import backtest_metrics
 from gluonts.evaluation import Evaluator
+from gluonts.model.deepstate import DeepStateEstimator
 from gluonts.model.predictor import Predictor
 from gluonts.model.forecast import Config, Forecast
 from gluonts.dataset.common import DataEntry, ListDataset, load_datasets
-from gluonts.mx.distribution import LogitNormalOutput, PoissonOutput
 from gluonts.mx.trainer import Trainer
 import mxnet as mx
 from mxnet.runtime import feature_list
@@ -50,46 +49,51 @@ def train(model_args):
     train_dataset_length = int(next(feat.cardinality
                                     for feat in datasets.metadata.feat_static_cat if feat.name == "ts_train_length"))
 
-    cardinality = int(next(feat.cardinality
-                           for feat in datasets.metadata.feat_static_cat if feat.name == "columns"))
-
     if not model_args.num_batches_per_epoch:
         model_args.num_batches_per_epoch = train_dataset_length // model_args.batch_size
         print(f"Defaulting num_batches_per_epoch to: [{model_args.num_batches_per_epoch}] "
               f"= (length of train dataset [{train_dataset_length}]) / (batch size [{model_args.batch_size}])")
 
-    estimator = DeepAREstimator(
+    if mx.context.num_gpus():
+        ctx = mx.gpu()
+        print("Using GPU context")
+    else:
+        ctx = mx.cpu()
+        print("Using CPU context")
+
+    estimator = DeepStateEstimator(
         freq=config.DATASET_FREQ,
         batch_size=model_args.batch_size,
-        context_length=model_args.past_length,
         prediction_length=model_args.prediction_length,
-        # dropout_rate=model_args.dropout_rate,
+        past_length=model_args.past_length,  # 288 periods * 5 minute periods = 1440 minutes / 24 hours
+        # 5 minute periods * 12 periods per hour  * 4 hours = 240 periods
+
+        dropout_rate=model_args.dropout_rate,
         num_layers=model_args.num_layers,
         num_cells=model_args.num_cells,
-        embedding_dimension=[200],
-        # scaling=False,
 
-        # dropoutcell_type='VariationalDropoutCell',
-        # use_feat_dynamic_real=True,
         use_feat_static_cat=True,
-        cardinality=[cardinality],
+        cardinality=[5],
 
         trainer=Trainer(
+            ctx=ctx,
             epochs=model_args.epochs,
             batch_size=model_args.batch_size,
             num_batches_per_epoch=model_args.num_batches_per_epoch,
-            # learning_rate=model_args.learning_rate
+            learning_rate=model_args.learning_rate
         )
     )
 
     # Train the model
     predictor = estimator.train(
-        training_data=datasets.train)
+        training_data=datasets.train,
+        # num_workers=4
+    )
 
     # Evaluate trained model on test data. This will serialize each of the agg_metrics into a well formatted log.
     # We use this to capture the metrics needed for hyperparameter tuning
     agg_metrics, item_metrics = backtest_metrics(
-        test_dataset=datasets.train,
+        test_dataset=datasets.test,
         predictor=predictor,
         evaluator=Evaluator(quantiles=[0.1, 0.5, 0.9]),
         num_samples=100,  # number of samples used in probabilistic evaluation
@@ -229,11 +233,11 @@ def _get_df_from_dataset_file(dataset_path: Path):
     return df
 
 
-def _vertical_split(df, context_length, prediction_length):
+def _vertical_split(df, past_length, prediction_length):
     """
     Split a dataset time-wise in a train and validation dataset.
     """
-    offset_from_end = 2 * (context_length + prediction_length)
+    offset_from_end = 2 * (past_length + prediction_length)
 
     dataset = ListDataset(
         [
@@ -270,7 +274,6 @@ def _vertical_split(df, context_length, prediction_length):
         ],
         freq=config.DATASET_FREQ
     )
-
 
     dataset_length = len(next(iter(dataset))["target"])
 

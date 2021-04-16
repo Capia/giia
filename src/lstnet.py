@@ -15,14 +15,17 @@ from typing import List, Tuple, Union
 from pathlib import Path
 
 from gluonts.dataset.field_names import FieldName
+from gluonts.dataset.multivariate_grouper import MultivariateGrouper
 from gluonts.dataset.split import OffsetSplitter
 from gluonts.dataset.stat import calculate_dataset_statistics
+from gluonts.model.deep_factor import DeepFactorEstimator
 from gluonts.model.deepar import DeepAREstimator
 from gluonts.evaluation.backtest import backtest_metrics
-from gluonts.evaluation import Evaluator
+from gluonts.evaluation import Evaluator, MultivariateEvaluator
+from gluonts.model.lstnet import LSTNetEstimator
 from gluonts.model.predictor import Predictor
 from gluonts.model.forecast import Config, Forecast
-from gluonts.dataset.common import DataEntry, ListDataset
+from gluonts.dataset.common import DataEntry, ListDataset, load_datasets, TrainDatasets
 from gluonts.mx.distribution import LogitNormalOutput, PoissonOutput
 from gluonts.mx.trainer import Trainer
 import mxnet as mx
@@ -37,75 +40,72 @@ def train(model_args):
     _describe_model(model_args)
 
     dataset_dir_path = Path(model_args.dataset_dir)
-    train_dataset_path = dataset_dir_path / config.TRAIN_DATASET_FILENAME
-    test_dataset_filename = dataset_dir_path / config.TEST_DATASET_FILENAME
+    datasets = load_datasets(
+        metadata=(dataset_dir_path / config.METADATA_DATASET_FILENAME).parent,
+        train=(dataset_dir_path / config.TRAIN_DATASET_FILENAME).parent,
+        test=(dataset_dir_path / config.TEST_DATASET_FILENAME).parent,
+    )
 
-    # Create train dataset
-    train_df = _get_df_from_dataset_file(train_dataset_path)
+    num_series = int(next(feat.cardinality
+                           for feat in datasets.metadata.feat_static_cat if feat.name == "num_series"))
 
-    train_dataset, validation_dataset = _vertical_split(
-        train_df, model_args.context_length, model_args.prediction_length)
-    train_statistics = calculate_dataset_statistics(train_dataset)
-    validation_statistics = calculate_dataset_statistics(validation_dataset)
-    print(f"Train dataset stats: {train_statistics}")
-    print(f"Validation dataset stats: {validation_statistics}")
+    # try loading data like https://gist.github.com/ehsanmok/b2c8fa6dbeea55860049414a16ddb3ff
+    # grouper_train = MultivariateGrouper(max_target_dim=num_series)
+    # grouper_test = MultivariateGrouper(max_target_dim=num_series)
+    # datasets = TrainDatasets(
+    #     metadata=datasets.metadata,
+    #     train=grouper_train(datasets.train),
+    #     test=grouper_test(datasets.test),
+    # )
+
+    print(f"Train dataset stats: {calculate_dataset_statistics(datasets.train)}")
+    print(f"Test dataset stats: {calculate_dataset_statistics(datasets.test)}")
+
+    # Get precomputed train length to prevent iterating through a large dataset in memory
+    train_dataset_length = int(next(feat.cardinality
+                                    for feat in datasets.metadata.feat_static_cat if feat.name == "ts_train_length"))
 
     if not model_args.num_batches_per_epoch:
-        model_args.num_batches_per_epoch = len(train_df) // model_args.batch_size
+        model_args.num_batches_per_epoch = train_dataset_length // model_args.batch_size
         print(f"Defaulting num_batches_per_epoch to: [{model_args.num_batches_per_epoch}] "
-              f"= (length of train dataset [{len(train_df)}]) / (batch size [{model_args.batch_size}])")
+              f"= (length of train dataset [{train_dataset_length}]) / (batch size [{model_args.batch_size}])")
 
-    estimator = DeepAREstimator(
+    estimator = LSTNetEstimator(
         freq=config.DATASET_FREQ,
         batch_size=model_args.batch_size,
-        context_length=model_args.context_length,
+        context_length=model_args.past_length,
         prediction_length=model_args.prediction_length,
-        dropout_rate=model_args.dropout_rate,
-        num_layers=model_args.num_layers,
-        num_cells=model_args.num_cells,
 
-        # dropoutcell_type='VariationalDropoutCell',
-        use_feat_dynamic_real=True,
+        num_series=num_series,
+        skip_size=9,
+        ar_window=18,
+        channels=90,
+        rnn_num_layers=90, skip_rnn_num_layers=9,
+
+        # TODO: Determine the correct distribution method. This article goes over some of the key differences
+        # https://www.investopedia.com/articles/06/probabilitydistribution.asp
+        # distr_output=PoissonOutput(),
 
         trainer=Trainer(
             epochs=model_args.epochs,
             batch_size=model_args.batch_size,
             num_batches_per_epoch=model_args.num_batches_per_epoch,
-            learning_rate=model_args.learning_rate
+            # learning_rate=model_args.learning_rate
         )
     )
 
     # Train the model
     predictor = estimator.train(
-        training_data=train_dataset,
-        validation_data=validation_dataset,
-        num_workers=4
-    )
-
-    # Create test dataset
-    test_df = _get_df_from_dataset_file(test_dataset_filename)
-
-    test_dataset = ListDataset(
-        [{
-            FieldName.START: test_df.index[0],
-            FieldName.TARGET: test_df['close'][:],
-            # FieldName.FEAT_DYNAMIC_REAL: [
-            #     test_df['open'][:],
-            #     test_df['high'][:],
-            #     test_df['low'][:],
-            #     test_df['volume'][:]
-            # ],
-            FieldName.ITEM_ID: "BTC/USDT",
-        }],
-        freq=config.DATASET_FREQ
+        training_data=datasets.train,
+        # num_workers=4
     )
 
     # Evaluate trained model on test data. This will serialize each of the agg_metrics into a well formatted log.
     # We use this to capture the metrics needed for hyperparameter tuning
     agg_metrics, item_metrics = backtest_metrics(
-        test_dataset=test_dataset,
+        test_dataset=datasets.test,
         predictor=predictor,
-        evaluator=Evaluator(quantiles=[0.1, 0.5, 0.9]),
+        evaluator=MultivariateEvaluator(quantiles=[0.1, 0.5, 0.9]),
         num_samples=100,  # number of samples used in probabilistic evaluation
     )
 
@@ -250,19 +250,41 @@ def _vertical_split(df, context_length, prediction_length):
     offset_from_end = 2 * (context_length + prediction_length)
 
     dataset = ListDataset(
-        [{
-            FieldName.START: df.index[0],
-            FieldName.TARGET: df['close'][:-prediction_length].values,
-            FieldName.FEAT_DYNAMIC_REAL: [
-                df['open'][:-prediction_length].values,
-                df['high'][:-prediction_length].values,
-                df['low'][:-prediction_length].values,
-                df['volume'][:-prediction_length].values
-            ],
-            FieldName.ITEM_ID: "BTC/USDT",
-        }],
+        [
+            {
+                FieldName.START: df.index[0],
+                FieldName.TARGET: df['close'][:-prediction_length].values,
+                FieldName.ITEM_ID: "close",
+                FieldName.FEAT_STATIC_CAT: np.array([0]),
+            },
+            {
+                FieldName.START: df.index[0],
+                FieldName.TARGET: df['open'][:-prediction_length].values,
+                FieldName.ITEM_ID: "open",
+                FieldName.FEAT_STATIC_CAT: np.array([1]),
+            },
+            {
+                FieldName.START: df.index[0],
+                FieldName.TARGET: df['high'][:-prediction_length].values,
+                FieldName.ITEM_ID: "high",
+                FieldName.FEAT_STATIC_CAT: np.array([2]),
+            },
+            {
+                FieldName.START: df.index[0],
+                FieldName.TARGET: df['low'][:-prediction_length].values,
+                FieldName.ITEM_ID: "low",
+                FieldName.FEAT_STATIC_CAT: np.array([3]),
+            },
+            {
+                FieldName.START: df.index[0],
+                FieldName.TARGET: df['volume'][:-prediction_length],
+                FieldName.ITEM_ID: "volume",
+                FieldName.FEAT_STATIC_CAT: np.array([4]),
+            },
+        ],
         freq=config.DATASET_FREQ
     )
+
 
     dataset_length = len(next(iter(dataset))["target"])
 
@@ -281,8 +303,8 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--epochs', type=int, default=config.HYPER_PARAMETERS["epochs"])
     parser.add_argument('--batch_size', type=int, default=config.HYPER_PARAMETERS["batch_size"])
-    parser.add_argument('--context_length', type=int, default=config.HYPER_PARAMETERS["context_length"])
     parser.add_argument('--prediction_length', type=int, default=config.HYPER_PARAMETERS["prediction_length"])
+    parser.add_argument('--past_length', type=int, default=config.HYPER_PARAMETERS["past_length"])
     parser.add_argument('--num_layers', type=int, default=config.HYPER_PARAMETERS["num_layers"])
     parser.add_argument('--num_cells', type=int, default=config.HYPER_PARAMETERS["num_cells"])
     parser.add_argument('--dropout_rate', type=float, default=config.HYPER_PARAMETERS["dropout_rate"])

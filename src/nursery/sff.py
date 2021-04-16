@@ -22,7 +22,8 @@ from gluonts.evaluation import Evaluator
 from gluonts.model.deepstate import DeepStateEstimator
 from gluonts.model.predictor import Predictor
 from gluonts.model.forecast import Config, Forecast
-from gluonts.dataset.common import DataEntry, ListDataset
+from gluonts.dataset.common import DataEntry, ListDataset, load_datasets
+from gluonts.model.simple_feedforward import SimpleFeedForwardEstimator
 from gluonts.mx.trainer import Trainer
 import mxnet as mx
 from mxnet.runtime import feature_list
@@ -36,23 +37,23 @@ def train(model_args):
     _describe_model(model_args)
 
     dataset_dir_path = Path(model_args.dataset_dir)
-    train_dataset_path = dataset_dir_path / config.TRAIN_DATASET_FILENAME
-    test_dataset_filename = dataset_dir_path / config.TEST_DATASET_FILENAME
+    datasets = load_datasets(
+        metadata=(dataset_dir_path / config.METADATA_DATASET_FILENAME).parent,
+        train=(dataset_dir_path / config.TRAIN_DATASET_FILENAME).parent,
+        test=(dataset_dir_path / config.TEST_DATASET_FILENAME).parent,
+    )
 
-    # Create train dataset
-    train_df = _get_df_from_dataset_file(train_dataset_path)
+    print(f"Train dataset stats: {calculate_dataset_statistics(datasets.train)}")
+    print(f"Test dataset stats: {calculate_dataset_statistics(datasets.test)}")
 
-    train_dataset, validation_dataset = _vertical_split(
-        train_df, model_args.past_length, model_args.prediction_length)
-    train_statistics = calculate_dataset_statistics(train_dataset)
-    validation_statistics = calculate_dataset_statistics(validation_dataset)
-    print(f"Train dataset stats: {train_statistics}")
-    print(f"Validation dataset stats: {validation_statistics}")
+    # Get precomputed train length to prevent iterating through a large dataset in memory
+    train_dataset_length = int(next(feat.cardinality
+                                    for feat in datasets.metadata.feat_static_cat if feat.name == "ts_train_length"))
 
     if not model_args.num_batches_per_epoch:
-        model_args.num_batches_per_epoch = len(train_df) // model_args.batch_size
+        model_args.num_batches_per_epoch = train_dataset_length // model_args.batch_size
         print(f"Defaulting num_batches_per_epoch to: [{model_args.num_batches_per_epoch}] "
-              f"= (length of train dataset [{len(train_df)}]) / (batch size [{model_args.batch_size}])")
+              f"= (length of train dataset [{train_dataset_length}]) / (batch size [{model_args.batch_size}])")
 
     if mx.context.num_gpus():
         ctx = mx.gpu()
@@ -61,22 +62,22 @@ def train(model_args):
         ctx = mx.cpu()
         print("Using CPU context")
 
-    estimator = DeepStateEstimator(
+    estimator = SimpleFeedForwardEstimator(
         freq=config.DATASET_FREQ,
-        batch_size=model_args.batch_size,
+        context_length=model_args.past_length,
         prediction_length=model_args.prediction_length,
-        past_length=model_args.past_length,  # 288 periods * 5 minute periods = 1440 minutes / 24 hours
-        # 5 minute periods * 12 periods per hour  * 4 hours = 240 periods
+        # batch_size=True,
+        # dropout_rate=model_args.dropout_rate,
+        # num_layers=model_args.num_layers,
+        # num_cells=model_args.num_cells,
 
-        dropout_rate=model_args.dropout_rate,
-        num_layers=model_args.num_layers,
-        num_cells=model_args.num_cells,
+        # TODO: Determine the correct distribution method. This article goes over some of the key differences
+        # https://www.investopedia.com/articles/06/probabilitydistribution.asp
+        # distr_output=PoissonOutput(),
 
-        use_feat_static_cat=True,
-        cardinality=[5],
+        # use_feat_dynamic_real=True,
 
         trainer=Trainer(
-            ctx=ctx,
             epochs=model_args.epochs,
             batch_size=model_args.batch_size,
             num_batches_per_epoch=model_args.num_batches_per_epoch,
@@ -86,28 +87,14 @@ def train(model_args):
 
     # Train the model
     predictor = estimator.train(
-        training_data=train_dataset,
-        validation_data=validation_dataset,
+        training_data=datasets.train,
         # num_workers=4
-    )
-
-    # Create test dataset
-    test_df = _get_df_from_dataset_file(test_dataset_filename)
-
-    test_dataset = ListDataset(
-        [{
-            FieldName.START: test_df.index[0],
-            FieldName.TARGET: test_df['close'][:].values,
-            FieldName.ITEM_ID: "close",
-            FieldName.FEAT_STATIC_CAT: np.array([0]),
-        }],
-        freq=config.DATASET_FREQ
     )
 
     # Evaluate trained model on test data. This will serialize each of the agg_metrics into a well formatted log.
     # We use this to capture the metrics needed for hyperparameter tuning
     agg_metrics, item_metrics = backtest_metrics(
-        test_dataset=test_dataset,
+        test_dataset=datasets.test,
         predictor=predictor,
         evaluator=Evaluator(quantiles=[0.1, 0.5, 0.9]),
         num_samples=100,  # number of samples used in probabilistic evaluation

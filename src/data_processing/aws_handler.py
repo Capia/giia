@@ -22,10 +22,10 @@ class AWSHandler:
         self.s3_dataset_dir_uri = f"s3://{self.s3_bucket}/{model_id}/datasets"
         self.s3_model_output_uri = f"s3://{self.s3_bucket}/{model_id}/models"
 
-    def upload_to_sagemaker_s3_bucket(self, dataset_dir_path, dataset_channel_file, override=True):
+    def upload_to_sagemaker_s3_bucket(self, dataset_dir_path: Path, dataset_channel_file: str, override=True):
         self.logger.log(f"Data will be uploaded to [{self.s3_bucket}]")
 
-        local_file = dataset_dir_path / f"{dataset_channel_file}"
+        local_file = dataset_dir_path / dataset_channel_file
         s3_path = f"{self.s3_dataset_dir_uri}/{dataset_channel_file}"
 
         assert s3_path.startswith('s3://')
@@ -43,6 +43,16 @@ class AWSHandler:
         with open(local_file, 'rb') as data:
             self.s3_bucket_resource.put_object(Key=path, Body=data)
             self.logger.log(f"Uploaded {dataset_channel_file} to {self.s3_dataset_dir_uri}")
+
+    def upload_train_datasets(self, dataset_dir_path: Path, override=True):
+        train_dataset_files = [
+            "metadata/metadata.json",
+            "train/data.json",
+            "test/data.json"
+        ]
+
+        for file in train_dataset_files:
+            self.upload_to_sagemaker_s3_bucket(dataset_dir_path, file, override)
 
     def download_model_from_s3(self, model_data_zip_path: str, local_artifact_dir: Path):
         # First download the compressed model
