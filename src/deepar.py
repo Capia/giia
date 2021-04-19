@@ -79,7 +79,7 @@ def train(model_args):
     predictor = estimator.train(
         training_data=train_dataset,
         validation_data=validation_dataset,
-        num_workers=4
+        # num_workers=4
     )
 
     # Create test dataset

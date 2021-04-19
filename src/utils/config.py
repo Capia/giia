@@ -29,7 +29,7 @@ _PROD_HYPER_PARAMETERS = {
     # Cannot be longer than 499 because freqtrader doesn't have dataframes available to the stratergy beyond that.
     # https://github.com/freqtrade/freqtrade-strategies/issues/79
     # Also, this significantly increases memory usage. Beware
-    'past_length': 144,
+    'context_length': 144,
 
     'num_layers': 4,
     'num_cells': 54,
@@ -45,7 +45,7 @@ _MODERATE_HYPER_PARAMETERS = {
     'batch_size': 32,
     'num_batches_per_epoch': 100,
     'prediction_length': 12,
-    'past_length': 12*12,
+    'context_length': 12*6,
     'num_layers': 6,
     'num_cells': 120,
     'dropout_rate': 0.1525,
@@ -59,7 +59,7 @@ _SIMPLE_HYPER_PARAMETERS = {
     'batch_size': 16,
     'num_batches_per_epoch': 10,
     'prediction_length': 12,
-    'past_length': 12 * 2,
+    'context_length': 12 * 2,
     'num_layers': 1,
     'num_cells': 20,
     'dropout_rate': 0.01,
@@ -68,4 +68,4 @@ _SIMPLE_HYPER_PARAMETERS = {
 
 # DO NOT COMMIT ANY CHANGES TO THIS CONFIG `HYPER_PARAMETERS = _PROD_HYPER_PARAMETERS`. You can change it for testing,
 # just do not commit it
-HYPER_PARAMETERS = _SIMPLE_HYPER_PARAMETERS
+HYPER_PARAMETERS = _MODERATE_HYPER_PARAMETERS

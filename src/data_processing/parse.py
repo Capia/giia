@@ -49,31 +49,12 @@ class Parse:
         # Copy dataset channels to their respective file
         dataset_dir_path.mkdir(parents=True, exist_ok=True)
 
-        train_dataset = self.df_to_multivariate_dataset(train_df)
-        test_dataset = self.df_to_multivariate_dataset(test_df)
+        # train_dataset = self.df_to_multivariate_dataset(train_df)
+        # test_dataset = self.df_to_multivariate_dataset(test_df)
+        train_dataset = self.df_to_multi_ts_dataset(train_df)
+        test_dataset = self.df_to_multi_ts_dataset(test_df)
 
-        datasets = TrainDatasets(
-            metadata=MetaData(
-                freq=config.DATASET_FREQ,
-                # target={'name': 'close'},
-                feat_static_cat=[
-                    CategoricalFeatureInfo(name="num_series", cardinality=len(df.columns)),
-
-                    # Not features actually used by the network. Just storing the metadata so it doesn't have to
-                    # be calculated later with an iterator
-                    CategoricalFeatureInfo(name="ts_train_length", cardinality=len(train_df)),
-                    CategoricalFeatureInfo(name="ts_test_length", cardinality=len(test_df)),
-                ],
-
-                # Purposely leave out prediction_length as it will couple the hyper parameter to the dataset
-            ),
-            train=train_dataset,
-            test=test_dataset
-        )
-
-        # print(MultivariateGrouper.to_ts(datasets.train))
-        # print(MultivariateGrouper.to_ts(datasets.train).tail(1))
-        # print(MultivariateGrouper.to_ts(datasets.train).describe())
+        datasets = self.build_train_datasets(train_df, train_dataset, test_df, test_dataset)
 
         datasets.save(str(dataset_dir_path))
         self.logger.log(f"Parsed train and test datasets can be found in [{dataset_dir_path}]", 'debug')
@@ -95,7 +76,7 @@ class Parse:
 
         return df
 
-    def df_to_dataset(self, df):
+    def df_to_multi_ts_dataset(self, df):
         return ListDataset(
             [
                 {
@@ -108,7 +89,21 @@ class Parse:
             freq=config.DATASET_FREQ
         )
 
-    def df_to_multivariate_dataset(self, df):
+    def df_to_multi_feature_dataset(self, df):
+        return ListDataset(
+            [
+                {
+                    FieldName.START: df.index[0],
+                    FieldName.TARGET: df["close"][:].values,
+                    FieldName.FEAT_DYNAMIC_REAL: [
+                        df[column_name][:].values for column_name in df.columns if column_name != "close"
+                    ],
+                }
+            ],
+            freq=config.DATASET_FREQ
+        )
+
+    def df_to_multivariate_target_dataset(self, df):
         return ListDataset(
             [
                 {
@@ -118,4 +113,24 @@ class Parse:
             ],
             freq=config.DATASET_FREQ,
             one_dim_target=False
+        )
+
+    def build_train_datasets(self, train_df, train_dataset, test_df, test_dataset):
+        return TrainDatasets(
+            metadata=MetaData(
+                freq=config.DATASET_FREQ,
+                # target={'name': 'close'},
+                feat_static_cat=[
+                    CategoricalFeatureInfo(name="num_series", cardinality=len(train_df.columns)),
+
+                    # Not features actually used by the network. Just storing the metadata so it doesn't have to
+                    # be calculated later with an iterator
+                    CategoricalFeatureInfo(name="ts_train_length", cardinality=len(train_df)),
+                    CategoricalFeatureInfo(name="ts_test_length", cardinality=len(test_df)),
+                ],
+
+                # Purposely leave out prediction_length as it will couple the hyper parameter to the dataset
+            ),
+            train=train_dataset,
+            test=test_dataset
         )

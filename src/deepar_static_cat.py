@@ -15,19 +15,14 @@ from typing import List, Tuple, Union
 from pathlib import Path
 
 from gluonts.dataset.field_names import FieldName
-from gluonts.dataset.multivariate_grouper import MultivariateGrouper
 from gluonts.dataset.split import OffsetSplitter
 from gluonts.dataset.stat import calculate_dataset_statistics
-from gluonts.model.deep_factor import DeepFactorEstimator
 from gluonts.model.deepar import DeepAREstimator
 from gluonts.evaluation.backtest import backtest_metrics
-from gluonts.evaluation import Evaluator, MultivariateEvaluator
-from gluonts.model.deepvar import DeepVAREstimator
-from gluonts.model.gpvar import GPVAREstimator
-from gluonts.model.lstnet import LSTNetEstimator
+from gluonts.evaluation import Evaluator
 from gluonts.model.predictor import Predictor
 from gluonts.model.forecast import Config, Forecast
-from gluonts.dataset.common import DataEntry, ListDataset, load_datasets, TrainDatasets
+from gluonts.dataset.common import DataEntry, ListDataset, load_datasets
 from gluonts.mx.distribution import LogitNormalOutput, PoissonOutput
 from gluonts.mx.trainer import Trainer
 import mxnet as mx
@@ -48,18 +43,6 @@ def train(model_args):
         test=(dataset_dir_path / config.TEST_DATASET_FILENAME).parent,
     )
 
-    num_series = int(next(feat.cardinality
-                           for feat in datasets.metadata.feat_static_cat if feat.name == "num_series"))
-
-    # # try loading data like https://gist.github.com/ehsanmok/b2c8fa6dbeea55860049414a16ddb3ff
-    # grouper_train = MultivariateGrouper(max_target_dim=num_series)
-    # grouper_test = MultivariateGrouper(max_target_dim=num_series)
-    # datasets = TrainDatasets(
-    #     metadata=datasets.metadata,
-    #     train=grouper_train(datasets.train),
-    #     test=grouper_test(datasets.test),
-    # )
-
     print(f"Train dataset stats: {calculate_dataset_statistics(datasets.train)}")
     print(f"Test dataset stats: {calculate_dataset_statistics(datasets.test)}")
 
@@ -67,27 +50,26 @@ def train(model_args):
     train_dataset_length = int(next(feat.cardinality
                                     for feat in datasets.metadata.feat_static_cat if feat.name == "ts_train_length"))
 
+    cardinality = int(next(feat.cardinality
+                           for feat in datasets.metadata.feat_static_cat if feat.name == "num_series"))
+
     if not model_args.num_batches_per_epoch:
         model_args.num_batches_per_epoch = train_dataset_length // model_args.batch_size
         print(f"Defaulting num_batches_per_epoch to: [{model_args.num_batches_per_epoch}] "
               f"= (length of train dataset [{train_dataset_length}]) / (batch size [{model_args.batch_size}])")
 
-    estimator = GPVAREstimator(
+    estimator = DeepAREstimator(
         freq=config.DATASET_FREQ,
         batch_size=model_args.batch_size,
-        context_length=model_args.past_length,
+        context_length=model_args.context_length,
         prediction_length=model_args.prediction_length,
-        target_dim=num_series,
+        dropout_rate=model_args.dropout_rate,
+        num_layers=model_args.num_layers,
+        num_cells=model_args.num_cells,
 
-        # num_series=num_series,
-        # skip_size=9,
-        # ar_window=18,
-        # channels=90,
-        # rnn_num_layers=90, skip_rnn_num_layers=9,
-
-        # TODO: Determine the correct distribution method. This article goes over some of the key differences
-        # https://www.investopedia.com/articles/06/probabilitydistribution.asp
-        # distr_output=PoissonOutput(),
+        # dropoutcell_type='VariationalDropoutCell',
+        use_feat_static_cat=True,
+        cardinality=[cardinality],
 
         trainer=Trainer(
             epochs=model_args.epochs,
@@ -99,16 +81,14 @@ def train(model_args):
 
     # Train the model
     predictor = estimator.train(
-        training_data=datasets.train,
-        # num_workers=4
-    )
+        training_data=datasets.train)
 
     # Evaluate trained model on test data. This will serialize each of the agg_metrics into a well formatted log.
     # We use this to capture the metrics needed for hyperparameter tuning
     agg_metrics, item_metrics = backtest_metrics(
-        test_dataset=datasets.test,
+        test_dataset=datasets.train,
         predictor=predictor,
-        evaluator=MultivariateEvaluator(quantiles=[0.1, 0.5, 0.9]),
+        evaluator=Evaluator(quantiles=[0.1, 0.5, 0.9]),
         num_samples=100,  # number of samples used in probabilistic evaluation
     )
 
@@ -307,7 +287,7 @@ def parse_args():
     parser.add_argument('--epochs', type=int, default=config.HYPER_PARAMETERS["epochs"])
     parser.add_argument('--batch_size', type=int, default=config.HYPER_PARAMETERS["batch_size"])
     parser.add_argument('--prediction_length', type=int, default=config.HYPER_PARAMETERS["prediction_length"])
-    parser.add_argument('--past_length', type=int, default=config.HYPER_PARAMETERS["past_length"])
+    parser.add_argument('--context_length', type=int, default=config.HYPER_PARAMETERS["context_length"])
     parser.add_argument('--num_layers', type=int, default=config.HYPER_PARAMETERS["num_layers"])
     parser.add_argument('--num_cells', type=int, default=config.HYPER_PARAMETERS["num_cells"])
     parser.add_argument('--dropout_rate', type=float, default=config.HYPER_PARAMETERS["dropout_rate"])
