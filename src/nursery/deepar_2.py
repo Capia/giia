@@ -20,6 +20,7 @@ from gluonts.dataset.stat import calculate_dataset_statistics
 from gluonts.model.deepar import DeepAREstimator
 from gluonts.evaluation.backtest import backtest_metrics
 from gluonts.evaluation import Evaluator
+from gluonts.model.gpvar import GPVAREstimator
 from gluonts.model.predictor import Predictor
 from gluonts.model.forecast import Config, Forecast
 from gluonts.dataset.common import DataEntry, ListDataset, load_datasets
@@ -58,7 +59,7 @@ def train(model_args):
         print(f"Defaulting num_batches_per_epoch to: [{model_args.num_batches_per_epoch}] "
               f"= (length of train dataset [{train_dataset_length}]) / (batch size [{model_args.batch_size}])")
 
-    estimator = DeepAREstimator(
+    estimator = GPVAREstimator(
         freq=config.DATASET_FREQ,
         batch_size=model_args.batch_size,
         context_length=model_args.past_length,

@@ -52,6 +52,8 @@ def train(model_args):
 
     cardinality = int(next(feat.cardinality
                            for feat in datasets.metadata.feat_static_cat if feat.name == "num_series"))
+    print(f"Cardinality of static category features is : {cardinality}")
+
 
     if not model_args.num_batches_per_epoch:
         model_args.num_batches_per_epoch = train_dataset_length // model_args.batch_size
@@ -63,9 +65,9 @@ def train(model_args):
         batch_size=model_args.batch_size,
         context_length=model_args.context_length,
         prediction_length=model_args.prediction_length,
-        dropout_rate=model_args.dropout_rate,
-        num_layers=model_args.num_layers,
-        num_cells=model_args.num_cells,
+        # dropout_rate=model_args.dropout_rate,
+        # num_layers=model_args.num_layers,
+        # num_cells=model_args.num_cells,
 
         # dropoutcell_type='VariationalDropoutCell',
         use_feat_static_cat=True,

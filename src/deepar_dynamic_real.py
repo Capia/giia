@@ -60,9 +60,9 @@ def train(model_args):
         batch_size=model_args.batch_size,
         context_length=model_args.context_length,
         prediction_length=model_args.prediction_length,
-        dropout_rate=model_args.dropout_rate,
-        num_layers=model_args.num_layers,
-        num_cells=model_args.num_cells,
+        # dropout_rate=model_args.dropout_rate,
+        # num_layers=model_args.num_layers,
+        # num_cells=model_args.num_cells,
 
         # dropoutcell_type='VariationalDropoutCell',
         use_feat_dynamic_real=True,
