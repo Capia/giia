@@ -22,6 +22,9 @@ class Parse:
         self.logger = logger
 
     def split_train_test_dataset(self, dataset_dir_path: Path):
+        # Copy dataset channels to their respective file
+        dataset_dir_path.mkdir(parents=True, exist_ok=True)
+
         # First prime the user_data_dir key. This will take priority when merged with config.json
         freqtrade_config = Configuration({"user_data_dir": config.FREQTRADE_USER_DATA_DIR})
         freqtrade_config = freqtrade_config.load_from_files([str(config.FREQTRADE_USER_DATA_DIR / "config.json")])
@@ -51,8 +54,8 @@ class Parse:
         train_df, test_df = np.array_split(
             df, (fractions[:-1].cumsum() * len(df)).astype(int))
 
-        # Copy dataset channels to their respective file
-        dataset_dir_path.mkdir(parents=True, exist_ok=True)
+        # Save df to file to make it easy to visualize/debug. Test df is used as it is smaller and more portable
+        test_df.to_csv("test.csv")
 
         train_dataset = self.df_to_multi_feature_dataset(train_df)
         test_dataset = self.df_to_multi_feature_dataset(test_df)
