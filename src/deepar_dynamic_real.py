@@ -57,8 +57,8 @@ def train(model_args):
 
     estimator = DeepAREstimator(
         freq=config.DATASET_FREQ,
-        batch_size=model_args.batch_size,
-        context_length=model_args.context_length,
+        # batch_size=model_args.batch_size,
+        # context_length=model_args.context_length,
         prediction_length=model_args.prediction_length,
         # dropout_rate=model_args.dropout_rate,
         # num_layers=model_args.num_layers,

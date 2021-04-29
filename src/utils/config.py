@@ -16,6 +16,9 @@ TEST_DATASET_FILENAME = "test/data.json"
 DATASET_FREQ = "5min"
 
 FREQTRADE_USER_DATA_DIR = Path("freqtrade") / "user_data"
+# Cannot be longer than 499 because freqtrader doesn't have dataframes available to the strategy beyond that.
+# https://github.com/freqtrade/freqtrade-strategies/issues/79
+FREQTRADE_MAX_CONTEXT = 499
 
 CRYPTO_PAIR = "BTC/USDT"
 
@@ -26,8 +29,7 @@ _PROD_HYPER_PARAMETERS = {
     'batch_size': 128,
     'prediction_length': 8,
 
-    # Cannot be longer than 499 because freqtrader doesn't have dataframes available to the stratergy beyond that.
-    # https://github.com/freqtrade/freqtrade-strategies/issues/79
+    # This cannot be longer than `FREQTRADE_MAX_CONTEXT`
     # Also, this significantly increases memory usage. Beware
     'context_length': 144,
 

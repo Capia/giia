@@ -54,7 +54,6 @@ def train(model_args):
                            for feat in datasets.metadata.feat_static_cat if feat.name == "num_series"))
     print(f"Cardinality of static category features is : {cardinality}")
 
-
     if not model_args.num_batches_per_epoch:
         model_args.num_batches_per_epoch = train_dataset_length // model_args.batch_size
         print(f"Defaulting num_batches_per_epoch to: [{model_args.num_batches_per_epoch}] "

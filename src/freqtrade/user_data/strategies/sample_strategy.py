@@ -121,6 +121,9 @@ class SampleStrategy(IStrategy):
         :return: a Dataframe with all mandatory indicators for the strategies
         """
 
+        dataframe['CDL3LINESTRIKE'] = ta.CDL3LINESTRIKE(dataframe)
+        return dataframe
+
         # Momentum Indicators
         # ------------------------------------
 
@@ -337,11 +340,18 @@ class SampleStrategy(IStrategy):
         :param metadata: Additional information, like the currently traded pair
         :return: DataFrame with buy column
         """
+        # dataframe.loc[
+        #     (
+        #         (qtpylib.crossed_above(dataframe['rsi'], 30)) &  # Signal: RSI crosses above 30
+        #         (dataframe['tema'] <= dataframe['bb_middleband']) &  # Guard: tema below BB middle
+        #         (dataframe['tema'] > dataframe['tema'].shift(1)) &  # Guard: tema is raising
+        #         (dataframe['volume'] > 0)  # Make sure Volume is not 0
+        #     ),
+        #     'buy'] = 1
+
         dataframe.loc[
             (
-                (qtpylib.crossed_above(dataframe['rsi'], 30)) &  # Signal: RSI crosses above 30
-                (dataframe['tema'] <= dataframe['bb_middleband']) &  # Guard: tema below BB middle
-                (dataframe['tema'] > dataframe['tema'].shift(1)) &  # Guard: tema is raising
+                (dataframe['CDL3LINESTRIKE'] > 0) &
                 (dataframe['volume'] > 0)  # Make sure Volume is not 0
             ),
             'buy'] = 1
@@ -355,12 +365,20 @@ class SampleStrategy(IStrategy):
         :param metadata: Additional information, like the currently traded pair
         :return: DataFrame with buy column
         """
+        # dataframe.loc[
+        #     (
+        #         (qtpylib.crossed_above(dataframe['rsi'], 70)) &  # Signal: RSI crosses above 70
+        #         (dataframe['tema'] > dataframe['bb_middleband']) &  # Guard: tema above BB middle
+        #         (dataframe['tema'] < dataframe['tema'].shift(1)) &  # Guard: tema is falling
+        #         (dataframe['volume'] > 0)  # Make sure Volume is not 0
+        #     ),
+        #     'sell'] = 1
+
         dataframe.loc[
             (
-                (qtpylib.crossed_above(dataframe['rsi'], 70)) &  # Signal: RSI crosses above 70
-                (dataframe['tema'] > dataframe['bb_middleband']) &  # Guard: tema above BB middle
-                (dataframe['tema'] < dataframe['tema'].shift(1)) &  # Guard: tema is falling
-                (dataframe['volume'] > 0)  # Make sure Volume is not 0
+                    (dataframe['CDL3LINESTRIKE'] <= 0) &
+                    (dataframe['volume'] > 0)  # Make sure Volume is not 0
             ),
             'sell'] = 1
+
         return dataframe

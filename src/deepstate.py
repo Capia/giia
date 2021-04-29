@@ -49,6 +49,10 @@ def train(model_args):
     train_dataset_length = int(next(feat.cardinality
                                     for feat in datasets.metadata.feat_static_cat if feat.name == "ts_train_length"))
 
+    cardinality = int(next(feat.cardinality
+                           for feat in datasets.metadata.feat_static_cat if feat.name == "num_series"))
+    print(f"Cardinality of static category features is : {cardinality}")
+
     if not model_args.num_batches_per_epoch:
         model_args.num_batches_per_epoch = train_dataset_length // model_args.batch_size
         print(f"Defaulting num_batches_per_epoch to: [{model_args.num_batches_per_epoch}] "
@@ -65,22 +69,24 @@ def train(model_args):
         freq=config.DATASET_FREQ,
         batch_size=model_args.batch_size,
         prediction_length=model_args.prediction_length,
-        past_length=model_args.past_length,  # 288 periods * 5 minute periods = 1440 minutes / 24 hours
+        past_length=model_args.context_length,  # 288 periods * 5 minute periods = 1440 minutes / 24 hours
         # 5 minute periods * 12 periods per hour  * 4 hours = 240 periods
 
-        dropout_rate=model_args.dropout_rate,
-        num_layers=model_args.num_layers,
-        num_cells=model_args.num_cells,
+        # dropout_rate=model_args.dropout_rate,
+        # num_layers=model_args.num_layers,
+        # num_cells=model_args.num_cells,
+
+        # use_feat_dynamic_real=True,
 
         use_feat_static_cat=True,
-        cardinality=[5],
+        cardinality=[cardinality],
 
         trainer=Trainer(
             ctx=ctx,
             epochs=model_args.epochs,
             batch_size=model_args.batch_size,
             num_batches_per_epoch=model_args.num_batches_per_epoch,
-            learning_rate=model_args.learning_rate
+            # learning_rate=model_args.learning_rate
         )
     )
 
@@ -293,7 +299,7 @@ def parse_args():
     parser.add_argument('--epochs', type=int, default=config.HYPER_PARAMETERS["epochs"])
     parser.add_argument('--batch_size', type=int, default=config.HYPER_PARAMETERS["batch_size"])
     parser.add_argument('--prediction_length', type=int, default=config.HYPER_PARAMETERS["prediction_length"])
-    parser.add_argument('--past_length', type=int, default=config.HYPER_PARAMETERS["past_length"])
+    parser.add_argument('--context_length', type=int, default=config.HYPER_PARAMETERS["context_length"])
     parser.add_argument('--num_layers', type=int, default=config.HYPER_PARAMETERS["num_layers"])
     parser.add_argument('--num_cells', type=int, default=config.HYPER_PARAMETERS["num_cells"])
     parser.add_argument('--dropout_rate', type=float, default=config.HYPER_PARAMETERS["dropout_rate"])
