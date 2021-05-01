@@ -1,15 +1,10 @@
 import numpy as np
-import pandas as pd
 from pathlib import Path
 
 from gluonts.dataset.common import ListDataset, TrainDatasets, CategoricalFeatureInfo, MetaData
 from gluonts.dataset.field_names import FieldName
-from gluonts.dataset.multivariate_grouper import MultivariateGrouper
-from pandas import DataFrame, concat
-import talib
-from itertools import compress
 
-from data_processing.candle_rankings import candle_rankings, candle_rankings_2
+import data_processing.marshal_features as mf
 from utils.logger_util import LoggerUtil
 from utils import config
 from freqtrade.data.history import load_pair_history
@@ -39,12 +34,12 @@ class Parse:
             raise ValueError('The candle dataframe is empty. Ensure that you are loading a dataset that has been '
                              'downloaded to the configured location')
 
-        df = self._marshal_candles(candles)
+        df = mf.marshal_candles(candles)
 
-        # self.logger.log("First sample:")
-        # self.logger.log(df.head(1), newline=True)
-        # self.logger.log("Last sample:")
-        # self.logger.log(df.tail(1), newline=True)
+        self.logger.log("First sample:")
+        self.logger.log(df.head(1), newline=True)
+        self.logger.log("Last sample:")
+        self.logger.log(df.tail(1), newline=True)
         self.logger.log(f"Number of columns: {len(df.columns)}")
         self.logger.log(df, newline=True)
 
@@ -66,28 +61,6 @@ class Parse:
         datasets.save(str(dataset_dir_path))
         self.logger.log(f"Parsed train and test datasets can be found in [{dataset_dir_path}]", 'debug')
 
-    def _marshal_candles(self, candles: DataFrame) -> DataFrame:
-        # These features are easier to manipulate with an integer index, so we run this first
-        # df = self._add_indicators(candles)
-        df = self._add_pattern_recognition(candles)
-        df = self._bin_volume(df)
-
-        # Index by datetime
-        df = df.set_index('date')
-
-        # Then remove UTC timezone since GluonTS does not work with it
-        df.index = df.index.tz_localize(None)
-
-        # Shift features down one timeframe and pad. This will make the model predict the next target value based
-        # on candles from a time frame's previous time frame.
-        # df['open'] = df['open'].shift(1)
-        # df['high'] = df['high'].shift(1)
-        # df['low'] = df['low'].shift(1)
-        # df['volume'] = df['volume'].shift(1)
-        # df = df[1:]
-
-        return df
-
     def df_to_covariate_dataset(self, df):
         return ListDataset(
             [
@@ -105,6 +78,13 @@ class Parse:
         # dynamic_cat_features = ["candlestick_pattern"]
         # dynamic_real_features = ["open", "high", "low", "volume", "candlestick_pattern"]
         dynamic_real_features_blacklist = ["close", "volume"]
+        feature_columns = []
+
+        for column_name in df.columns:
+            if column_name not in dynamic_real_features_blacklist:
+                feature_columns.append(column_name)
+
+        print(feature_columns)
 
         return ListDataset(
             [
@@ -113,8 +93,7 @@ class Parse:
                     FieldName.TARGET: df["close"][:].values,
                     FieldName.ITEM_ID: "close",
                     FieldName.FEAT_DYNAMIC_REAL: [
-                        df[column_name][:].values for column_name in df.columns if
-                        column_name not in dynamic_real_features_blacklist
+                        df[column_name][:].values for column_name in feature_columns
                     ],
                     # FieldName.FEAT_DYNAMIC_REAL: [
                     #     df[column_name][:].values for column_name in df.columns if column_name in dynamic_real_features
@@ -158,107 +137,3 @@ class Parse:
             train=train_dataset,
             test=test_dataset
         )
-
-    def _add_indicators(self, df):
-        return concat([df], axis=1)
-
-    def _add_pattern_recognition(self, df):
-        pattern_names = talib.get_function_groups()['Pattern Recognition']
-        pattern_data = []
-        self.logger.log(f"Number of patterns: {len(pattern_names)}")
-
-        # create columns for each pattern
-        for candle_name in pattern_names:
-            # below is same as;
-            # talib.CDL3LINESTRIKE(op, hi, lo, cl)
-            pattern_data.append(getattr(talib, candle_name)(df["open"], df["high"], df["low"], df["close"]))
-
-        pattern_data = np.array(pattern_data).T.tolist()
-        pattern_df = self._get_pattern_sparse2dense(pattern_data, pattern_names)
-        # pattern_df = self._get_pattern_one_hot(pattern_data, pattern_names)
-
-        assert len(df) == len(pattern_df), "The original dataframe and the new indicator dataframe are different " \
-                                          f"lengths. df [{len(df)}] vs candle_df [{len(pattern_df)}]. " \
-                                          f"They cannot be combined"
-        return concat([df, pattern_df], axis=1)
-
-    def _get_pattern_one_hot(self, candle_data_t, candle_names):
-        candlestick_pattern = []
-        no_pattern_metadata = candle_rankings_2.get("NO_PATTERN")
-
-        pattern_embedding = np.array(range(0, len(candle_rankings_2)))
-        one_hot_encoding = np.zeros((pattern_embedding.size, np.max(pattern_embedding) + 1))
-        one_hot_encoding[np.arange(pattern_embedding.size), pattern_embedding] = 1
-
-        for r_index, row in enumerate(candle_data_t):
-            best_rank = no_pattern_metadata["rank"]
-            best_pattern = one_hot_encoding[no_pattern_metadata["encoding"] - 1]
-
-            for c_index, col in enumerate(row):
-                if col != 0:
-                    pattern = candle_names[c_index]
-                    if col > 0:
-                        pattern = pattern + '_Bull'
-                    else:
-                        pattern = pattern + '_Bear'
-
-                    pattern_metadata = candle_rankings_2.get(pattern, no_pattern_metadata)
-                    if pattern_metadata["rank"] < best_rank:
-                        best_rank = pattern_metadata["rank"]
-                        best_pattern = one_hot_encoding[pattern_metadata["encoding"] - 1]
-
-            candlestick_pattern.append(best_pattern)
-
-        candle_df = DataFrame(candlestick_pattern, columns=pattern_embedding)
-
-        print("--------------")
-        print(candle_df.head(1))
-        print("--------------")
-        print("ONE-HOT CONVERSION COMPLETE")
-
-        return candle_df
-
-    def _get_pattern_sparse2dense(self, candle_data_t, candle_names):
-        patterns = []
-        no_pattern_metadata = candle_rankings_2.get("NO_PATTERN")
-
-        for r_index, row in enumerate(candle_data_t):
-            pattern_count = 0
-            best_rank = no_pattern_metadata["rank"]
-            best_pattern = no_pattern_metadata["encoding"]
-
-            for c_index, col in enumerate(row):
-                if col != 0:
-                    pattern_count += 1
-                    pattern = candle_names[c_index]
-                    if col > 0:
-                        pattern = pattern + '_Bull'
-                    else:
-                        pattern = pattern + '_Bear'
-
-                    pattern_metadata = candle_rankings_2.get(pattern, no_pattern_metadata)
-                    if pattern_metadata["rank"] < best_rank:
-                        best_rank = pattern_metadata["rank"]
-                        best_pattern = pattern_metadata["encoding"]
-
-            patterns.append([pattern_count, best_pattern])
-
-        pattern_df = DataFrame(patterns, columns=["pattern_count", "pattern_detected"])
-        self.logger.log("PATTERN SPARSE TO DENSE CONVERSION COMPLETE")
-
-        return pattern_df
-
-    def _bin_volume(self, df):
-        jenks_breaks = [0.0, 125.416263, 298.632517, 608.76506, 1197.486795, 2445.284399, 8277.1723]
-
-        df['volume_bin'] = pd.qcut(
-            df['volume'], q=4, labels=[1, 2, 3, 4])
-
-        # df['volume_bin'] = pd.cut(df['volume'],
-        #                           include_lowest=True,
-        #                           bins=jenks_breaks,
-        #                           labels=[1, 2, 3, 4, 5, 6]
-        #                           # labels=['bucket_1', 'bucket_2', 'bucket_3', 'bucket_4', 'bucket_5', 'bucket_6']
-        #                           )
-
-        return df

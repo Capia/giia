@@ -7,6 +7,8 @@ from pandas import DataFrame
 
 from freqtrade.strategy.interface import IStrategy
 
+import data_processing.marshal_features as mf
+
 # --------------------------------
 # Add your lib to import here
 import talib.abstract as ta
@@ -121,7 +123,11 @@ class SampleStrategy(IStrategy):
         :return: a Dataframe with all mandatory indicators for the strategies
         """
 
-        dataframe['CDL3LINESTRIKE'] = ta.CDL3LINESTRIKE(dataframe)
+        # Essentially replicate what mf.marshal_candles is doing. This is so we have all the same values for inference as
+        # the ones used for training
+        dataframe = mf.add_pattern_recognition(dataframe)
+        dataframe = mf.bin_volume(dataframe)
+
         return dataframe
 
         # Momentum Indicators
@@ -351,7 +357,7 @@ class SampleStrategy(IStrategy):
 
         dataframe.loc[
             (
-                (dataframe['CDL3LINESTRIKE'] > 0) &
+                (dataframe['pattern_detected'] > 0) &
                 (dataframe['volume'] > 0)  # Make sure Volume is not 0
             ),
             'buy'] = 1
@@ -376,7 +382,7 @@ class SampleStrategy(IStrategy):
 
         dataframe.loc[
             (
-                    (dataframe['CDL3LINESTRIKE'] <= 0) &
+                    (dataframe['pattern_detected'] <= 0) &
                     (dataframe['volume'] > 0)  # Make sure Volume is not 0
             ),
             'sell'] = 1

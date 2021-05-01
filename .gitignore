@@ -22,6 +22,7 @@ out/
 # FreqTrade
 src/freqtrade/user_data/data
 src/freqtrade/user_data/logs
+src/freqtrade/user_data/notebooks/.ipynb_checkpoints/
 
 # Other
 .DS_Store
