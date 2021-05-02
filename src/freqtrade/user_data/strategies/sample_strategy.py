@@ -7,13 +7,12 @@ from pandas import DataFrame
 
 from freqtrade.strategy.interface import IStrategy
 
-import data_processing.marshal_features as mf
-
 # --------------------------------
 # Add your lib to import here
 import talib.abstract as ta
 import freqtrade.vendor.qtpylib.indicators as qtpylib
 
+import data_processing.marshal_features as mf
 
 # This class is a sample. Feel free to customize it.
 class SampleStrategy(IStrategy):
@@ -123,10 +122,10 @@ class SampleStrategy(IStrategy):
         :return: a Dataframe with all mandatory indicators for the strategies
         """
 
-        # Essentially replicate what mf.marshal_candles is doing. This is so we have all the same values for inference as
-        # the ones used for training
-        dataframe = mf.add_pattern_recognition(dataframe)
-        dataframe = mf.bin_volume(dataframe)
+        # Essentially replicate what mf.marshal_candles is doing. This is so we have all the same values for inference
+        # as the ones used for training
+        dataframe = dataframe.round(2)
+        dataframe = mf.add_technical_indicator_features(dataframe)
 
         return dataframe
 
@@ -357,7 +356,7 @@ class SampleStrategy(IStrategy):
 
         dataframe.loc[
             (
-                (dataframe['pattern_detected'] > 0) &
+                # (dataframe['pattern_detected'] > 0) &
                 (dataframe['volume'] > 0)  # Make sure Volume is not 0
             ),
             'buy'] = 1
@@ -382,7 +381,7 @@ class SampleStrategy(IStrategy):
 
         dataframe.loc[
             (
-                    (dataframe['pattern_detected'] <= 0) &
+                    # (dataframe['pattern_detected'] <= 0) &
                     (dataframe['volume'] > 0)  # Make sure Volume is not 0
             ),
             'sell'] = 1

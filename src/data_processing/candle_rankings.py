@@ -6,7 +6,7 @@
 # since they will always return only 1 version.
 
 # Note - 2
-# The ranks were determined based on performance noted in the following website:
+# The ranks were determined based on performance noted in the following websites:
 # http://www.lykoff.com/market/crypt
 # http://www.thepatternsite.com/rank.html
 import sys

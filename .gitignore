@@ -26,3 +26,4 @@ src/freqtrade/user_data/notebooks/.ipynb_checkpoints/
 
 # Other
 .DS_Store
+/src/test.csv

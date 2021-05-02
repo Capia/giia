@@ -46,7 +46,7 @@ _MODERATE_HYPER_PARAMETERS = {
     'epochs': 4,
     'batch_size': 32,
     'num_batches_per_epoch': 100,
-    'prediction_length': 12,
+    'prediction_length': 3,
     'context_length': 12*6,
     'num_layers': 6,
     'num_cells': 120,

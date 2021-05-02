@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import talib
+import talib.abstract as ta
 from pandas import DataFrame, concat
 
 from data_processing.candle_rankings import candle_rankings_2
@@ -10,11 +11,12 @@ NATURAL_VOLUME_BREAKS = [0.0, 125.416263, 298.632517, 608.76506, 1197.486795, 24
 #                          2189.231502, 3517.888325, 8277.1723]
 
 
-def marshal_candles(candles: DataFrame) -> DataFrame:
-    # These features are easier to manipulate with an integer index, so we run this first
-    # df = self._add_indicators(candles)
-    df = add_pattern_recognition(candles)
-    df = bin_volume(df)
+def marshal_candles(df: DataFrame) -> DataFrame:
+    # This should be first as all subsequent feature engineering should be based on the round number
+    df = df.round(2)
+
+    # These features are easier to manipulate with an integer index, so we add them before setting the time-series index
+    df = add_technical_indicator_features(df)
 
     # Index by datetime
     df = df.set_index('date')
@@ -32,29 +34,50 @@ def marshal_candles(candles: DataFrame) -> DataFrame:
     return df
 
 
-def add_indicators(df: DataFrame):
-    return concat([df], axis=1)
+def add_technical_indicator_features(df: DataFrame) -> DataFrame:
+    # NOTE: Appending to Dataframes is slow, thus these should all return separate dataframes to then append together
+    # only one time
+    # momentum_indicators = get_momentum_indicators(df)
+    pattern_recognition = get_pattern_recognition(df)
+    volume_bin = get_volume_bin(df)
+
+    return concat([df, pattern_recognition, volume_bin], axis=1)
 
 
-def add_pattern_recognition(df: DataFrame):
+def get_momentum_indicators(df: DataFrame) -> DataFrame:
+    momentum_indicator_names = talib.get_function_groups()['Momentum Indicators']
+    momentum_indicator_data = []
+    print(f"Number of patterns: {len(momentum_indicator_names)}")
+
+    for indicator in momentum_indicator_names:
+        momentum_indicator_data.append(getattr(ta, indicator)(df))
+
+    print(momentum_indicator_data[0])
+    print(momentum_indicator_data)
+    momentum_indicator_data = np.array(momentum_indicator_data).T.tolist()
+    momentum_indicator_df = DataFrame(momentum_indicator_data,
+                                      columns=["momentum_indicator_count", "momentum_indicator_detected"])
+
+    _verify_df_length(df, momentum_indicator_df, "momentum_indicator")
+    return momentum_indicator_df
+
+
+def get_pattern_recognition(df: DataFrame) -> DataFrame:
     pattern_names = talib.get_function_groups()['Pattern Recognition']
-    pattern_data = []
+    pattern_data = [None] * len(pattern_names)
     print(f"Number of patterns: {len(pattern_names)}")
 
-    # create columns for each pattern
-    for candle_name in pattern_names:
+    for idx, pattern in enumerate(pattern_names):
         # below is same as;
         # talib.CDL3LINESTRIKE(op, hi, lo, cl)
-        pattern_data.append(getattr(talib, candle_name)(df["open"], df["high"], df["low"], df["close"]))
+        pattern_data[idx] = getattr(talib, pattern)(df["open"], df["high"], df["low"], df["close"])
 
     pattern_data = np.array(pattern_data).T.tolist()
     pattern_df = _get_pattern_sparse2dense(pattern_data, pattern_names)
     # pattern_df = self._get_pattern_one_hot(pattern_data, pattern_names)
 
-    assert len(df) == len(pattern_df), "The original dataframe and the new indicator dataframe are different " \
-                                       f"lengths. df [{len(df)}] vs candle_df [{len(pattern_df)}]. " \
-                                       f"They cannot be combined"
-    return concat([df, pattern_df], axis=1)
+    _verify_df_length(df, pattern_df, "pattern_recognition")
+    return pattern_df
 
 
 def _get_pattern_one_hot(pattern_data: list, candle_names: list):
@@ -94,7 +117,7 @@ def _get_pattern_sparse2dense(pattern_data: list, candle_names: list):
     patterns = []
     no_pattern_metadata = candle_rankings_2.get("NO_PATTERN")
 
-    for r_index, row in enumerate(pattern_data):
+    for row in pattern_data:
         pattern_count = 0
         best_rank = no_pattern_metadata["rank"]
         best_pattern = no_pattern_metadata["encoding"]
@@ -121,30 +144,38 @@ def _get_pattern_sparse2dense(pattern_data: list, candle_names: list):
     return pattern_df
 
 
-def bin_volume(df: DataFrame, use_natural_breaks=True):
+def get_volume_bin(df: DataFrame, use_natural_breaks=True) -> DataFrame:
     def natural_breaks(df, num_breaks=10):
         # This takes some time, so I ran it once and save the classes to a constant
         # import jenkspy
         # NATURAL_VOLUME_BREAKS = jenkspy.jenks_breaks(df["volume"], nb_class=num_breaks)
         num_breaks = len(NATURAL_VOLUME_BREAKS) - 1
 
-        df['volume_bin'] = pd.cut(
+        volume_bin_data = pd.cut(
             df['volume'],
             bins=NATURAL_VOLUME_BREAKS,
             labels=[x for x in range(num_breaks)],
             include_lowest=True
         )
-        return df
+        return volume_bin_data
 
     def quantile_breaks(df, num_breaks=10):
-        df['volume_bin'], breaks = pd.qcut(
+        volume_bin_data, breaks = pd.qcut(
             df['volume'],
             q=num_breaks,
             labels=[str(f"bucket_{x}") for x in range(num_breaks)],
             retbins=True
         )
-        return df
+        return volume_bin_data
 
-    df = natural_breaks(df) if use_natural_breaks else quantile_breaks(df)
+    volume_bin_df = natural_breaks(df) if use_natural_breaks else quantile_breaks(df)
+    volume_bin_df = volume_bin_df.rename("volume_bin")
 
-    return df
+    _verify_df_length(df, volume_bin_df, "volume_bin")
+    return volume_bin_df
+
+
+def _verify_df_length(original_df: DataFrame, feature_df: DataFrame, feature_name: str):
+    assert len(original_df) == len(feature_df), \
+        f"The original dataframe and the {feature_name} dataframe are different lengths. original_df " \
+        f"[{len(original_df)}] != feature_df [{len(feature_df)}]. They cannot be combined"

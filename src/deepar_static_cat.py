@@ -87,7 +87,7 @@ def train(model_args):
     # Evaluate trained model on test data. This will serialize each of the agg_metrics into a well formatted log.
     # We use this to capture the metrics needed for hyperparameter tuning
     agg_metrics, item_metrics = backtest_metrics(
-        test_dataset=datasets.train,
+        test_dataset=datasets.test,
         predictor=predictor,
         evaluator=Evaluator(quantiles=[0.1, 0.5, 0.9]),
         num_samples=100,  # number of samples used in probabilistic evaluation

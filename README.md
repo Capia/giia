@@ -78,6 +78,7 @@ you choose, ensure you check it is installed with `nbstripout --status`
 and identify the most favorable trades based on risk vs reward.
 
 ### Other Ideas for Input Parameters
+- tick vs time based candles https://towardsdatascience.com/advanced-candlesticks-for-machine-learning-i-tick-bars-a8b93728b4c5
 - Google Trends
 - Foreign markets
 - Futures
