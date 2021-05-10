@@ -52,7 +52,7 @@ def train(model_args):
                                     for feat in datasets.metadata.feat_static_cat if feat.name == "ts_train_length"))
 
     cardinality = int(next(feat.cardinality
-                            for feat in datasets.metadata.feat_static_cat if feat.name == "columns"))
+                           for feat in datasets.metadata.feat_static_cat if feat.name == "num_series"))
 
     if not model_args.num_batches_per_epoch:
         model_args.num_batches_per_epoch = train_dataset_length // model_args.batch_size
@@ -62,14 +62,14 @@ def train(model_args):
     estimator = DeepFactorEstimator(
         freq=config.DATASET_FREQ,
         batch_size=model_args.batch_size,
-        # context_length=model_args.past_length,
+        # context_length=model_args.context_length,
         prediction_length=model_args.prediction_length,
 
-        num_hidden_global=500,
-        num_layers_global=50,
-        num_factors=100,
-        num_hidden_local=50,
-        num_layers_local=10,
+        # num_hidden_global=500,
+        # num_layers_global=50,
+        # num_factors=100,
+        # num_hidden_local=50,
+        # num_layers_local=10,
         # dropout_rate=model_args.dropout_rate,
         # num_layers=model_args.num_layers,
         # num_cells=model_args.num_cells,
@@ -77,7 +77,7 @@ def train(model_args):
         # dropoutcell_type='VariationalDropoutCell',
         # use_feat_dynamic_real=True,
         # use_feat_static_cat=True,
-        cardinality=[5],
+        cardinality=[cardinality],
 
         trainer=Trainer(
             epochs=model_args.epochs,
@@ -297,7 +297,7 @@ def parse_args():
     parser.add_argument('--epochs', type=int, default=config.HYPER_PARAMETERS["epochs"])
     parser.add_argument('--batch_size', type=int, default=config.HYPER_PARAMETERS["batch_size"])
     parser.add_argument('--prediction_length', type=int, default=config.HYPER_PARAMETERS["prediction_length"])
-    parser.add_argument('--past_length', type=int, default=config.HYPER_PARAMETERS["past_length"])
+    parser.add_argument('--context_length', type=int, default=config.HYPER_PARAMETERS["context_length"])
     parser.add_argument('--num_layers', type=int, default=config.HYPER_PARAMETERS["num_layers"])
     parser.add_argument('--num_cells', type=int, default=config.HYPER_PARAMETERS["num_cells"])
     parser.add_argument('--dropout_rate', type=float, default=config.HYPER_PARAMETERS["dropout_rate"])

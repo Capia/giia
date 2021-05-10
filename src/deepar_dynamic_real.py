@@ -6,9 +6,12 @@
 import os
 import io
 
-import pandas as pd
-import argparse
+import mxnet
+import gluonts
 import json
+import argparse
+
+import pandas as pd
 import numpy as np
 
 from typing import List, Tuple, Union
@@ -23,9 +26,8 @@ from gluonts.evaluation import Evaluator
 from gluonts.model.predictor import Predictor
 from gluonts.model.forecast import Config, Forecast
 from gluonts.dataset.common import DataEntry, ListDataset, load_datasets
-from gluonts.mx.distribution import LogitNormalOutput, PoissonOutput
+from gluonts.mx.distribution import PoissonOutput, NegativeBinomialOutput
 from gluonts.mx.trainer import Trainer
-import mxnet as mx
 from mxnet.runtime import feature_list
 
 from utils import config
@@ -58,7 +60,7 @@ def train(model_args):
     estimator = DeepAREstimator(
         freq=config.DATASET_FREQ,
         # batch_size=model_args.batch_size,
-        # context_length=model_args.context_length,
+        context_length=model_args.context_length,
         prediction_length=model_args.prediction_length,
         # dropout_rate=model_args.dropout_rate,
         # num_layers=model_args.num_layers,
@@ -66,6 +68,7 @@ def train(model_args):
 
         # dropoutcell_type='VariationalDropoutCell',
         use_feat_dynamic_real=True,
+        distr_output=NegativeBinomialOutput(),
         # distr_output=PoissonOutput(),
         # distr_output=LogitNormalOutput(),
 
@@ -85,7 +88,10 @@ def train(model_args):
     agg_metrics, item_metrics = backtest_metrics(
         test_dataset=datasets.test,
         predictor=predictor,
-        evaluator=Evaluator(quantiles=[0.1, 0.5, 0.9]),
+        evaluator=Evaluator(
+            quantiles=[0.1, 0.5, 0.9],
+            # seasonality=5
+        ),
         num_samples=100,  # number of samples used in probabilistic evaluation
     )
 
@@ -206,8 +212,10 @@ def _output_fn(
 def _describe_model(model_args):
     print(f"Using the follow arguments: [{model_args}]")
 
-    print(f"MXNet version [{mx.__version__}]")
-    print(f"Number of GPUs available [{mx.context.num_gpus()}]")
+    print(f"The model id is [{config.MODEL_ID}]")
+    print(f"The MXNet version is [{mxnet.__version__}]")
+    print(f"The GluonTS version is [{gluonts.__version__}]")
+    print(f"The GPU count is [{mxnet.context.num_gpus()}]")
     print(f"{feature_list()}")
 
 
@@ -264,7 +272,6 @@ def _vertical_split(df, context_length, prediction_length):
         ],
         freq=config.DATASET_FREQ
     )
-
 
     dataset_length = len(next(iter(dataset))["target"])
 

@@ -1,3 +1,5 @@
+from math import sqrt
+
 import numpy as np
 import pandas as pd
 import talib
@@ -6,14 +8,15 @@ from pandas import DataFrame, concat
 
 from data_processing.candle_rankings import candle_rankings_2
 
-NATURAL_VOLUME_BREAKS = [0.0, 125.416263, 298.632517, 608.76506, 1197.486795, 2445.284399, 8277.1723]
+# NATURAL_VOLUME_BREAKS = [0.0, 125.416263, 298.632517, 608.76506, 1197.486795, 2445.284399, 8277.1723]
+NATURAL_VOLUME_BREAKS = [0.0, 604.22808, 1263.66949, 2312.48193, 4048.12917, 7249.01953, 23620.74111]
 # NATURAL_VOLUME_BREAKS = [0.0, 69.912673, 148.257113, 252.325899, 402.375676, 621.793142, 946.410967, 1432.262112,
 #                          2189.231502, 3517.888325, 8277.1723]
 
 
 def marshal_candles(df: DataFrame) -> DataFrame:
     # This should be first as all subsequent feature engineering should be based on the round number
-    df = df.round(2)
+    # df = df.round(2)
 
     # These features are easier to manipulate with an integer index, so we add them before setting the time-series index
     df = add_technical_indicator_features(df)
@@ -25,11 +28,20 @@ def marshal_candles(df: DataFrame) -> DataFrame:
     df.index = df.index.tz_localize(None)
 
     # Shift features down one timeframe and pad
+    # for column in df.columns:
+    #     if column != "hma":
+    #         df[column].shift(30)
+    #         print(f"shifted {column}")
     # df['open'] = df['open'].shift(1)
     # df['high'] = df['high'].shift(1)
     # df['low'] = df['low'].shift(1)
     # df['volume'] = df['volume'].shift(1)
-    # df = df[1:]
+    # df = df[-33:]
+    # df = df["2019-06-01 00:00:00":]
+    # df["hma"] = df["hma"].shift(-1)
+    # df["hma_shift"] = df["hma"].shift(-3)
+
+    df = df["2021-01-01 00:00:00":]
 
     return df
 
@@ -37,35 +49,80 @@ def marshal_candles(df: DataFrame) -> DataFrame:
 def add_technical_indicator_features(df: DataFrame) -> DataFrame:
     # NOTE: Appending to Dataframes is slow, thus these should all return separate dataframes to then append together
     # only one time
-    # momentum_indicators = get_momentum_indicators(df)
-    pattern_recognition = get_pattern_recognition(df)
-    volume_bin = get_volume_bin(df)
+    dfs = [
+        df,
+        get_momentum_indicators(df),
+        get_overlap_studies(df),
+        get_pattern_recognition(df),
+        get_volume_bin(df)
+    ]
 
-    return concat([df, pattern_recognition, volume_bin], axis=1)
+    return concat(dfs, axis=1)
 
 
 def get_momentum_indicators(df: DataFrame) -> DataFrame:
-    momentum_indicator_names = talib.get_function_groups()['Momentum Indicators']
-    momentum_indicator_data = []
-    print(f"Number of patterns: {len(momentum_indicator_names)}")
+    momentum_indicator_data = {}
 
-    for indicator in momentum_indicator_names:
-        momentum_indicator_data.append(getattr(ta, indicator)(df))
+    _transpose_and_add(momentum_indicator_data, "mfi", ta.MFI(df))
+    _transpose_and_add(momentum_indicator_data, "roc", ta.ROC(df))
+    _transpose_and_add(momentum_indicator_data, "adx", ta.ADX(df))
+    _transpose_and_add(momentum_indicator_data, "rsi", ta.RSI(df))
 
-    print(momentum_indicator_data[0])
-    print(momentum_indicator_data)
-    momentum_indicator_data = np.array(momentum_indicator_data).T.tolist()
-    momentum_indicator_df = DataFrame(momentum_indicator_data,
-                                      columns=["momentum_indicator_count", "momentum_indicator_detected"])
+    stoch = ta.STOCH(df)
+    _transpose_and_add(momentum_indicator_data, "slowd", stoch['slowd'])
+    _transpose_and_add(momentum_indicator_data, "slowk", stoch['slowk'])
+
+    macd = ta.MACD(df)
+    _transpose_and_add(momentum_indicator_data, "macd", macd['macd'])
+    _transpose_and_add(momentum_indicator_data, "macdsignal", macd['macdsignal'])
+    _transpose_and_add(momentum_indicator_data, "macdhist", macd['macdhist'])
+
+    momentum_indicator_df = DataFrame(momentum_indicator_data)
 
     _verify_df_length(df, momentum_indicator_df, "momentum_indicator")
     return momentum_indicator_df
 
 
+def get_overlap_studies(df: DataFrame) -> DataFrame:
+    overlap_studies_data = {}
+
+    # Bollinger Bands
+    # bollinger = qtpylib.bollinger_bands(qtpylib.typical_price(df), window=20, stds=2)
+    # _transpose_and_add(overlap_studies_data, "bb_lowerband", bollinger['lower'])
+    # _transpose_and_add(overlap_studies_data, "bb_middleband", bollinger['mid'])
+    # _transpose_and_add(overlap_studies_data, "bb_upperband", bollinger['upper'])
+
+    # Parabolic SAR
+    # dataframe['sar'] = ta.SAR(dataframe)
+
+    timeperiod = 5
+
+    # TEMA - Triple Exponential Moving Average
+    # _transpose_and_add(overlap_studies_data, "tema", ta.TEMA(df, timeperiod=timeperiod))
+    # _transpose_and_add(overlap_studies_data, "ema", ta.SMA(df, timeperiod=timeperiod))
+
+    # HMA = WMA(2 * WMA(n / 2) − WMA(n)), sqrt(n))
+    # hma = wma(2 * wma(data, period // 2) - wma(data, period), sqrt(period))
+
+    hma = ta.WMA(2 * ta.WMA(df, timeperiod=timeperiod // 2) - ta.WMA(df, timeperiod=timeperiod), timeperiod=int(sqrt(timeperiod)))
+    _transpose_and_add(overlap_studies_data, "hma", hma)
+
+    # Cycle Indicator
+    # ------------------------------------
+    # Hilbert Transform Indicator - SineWave
+    # hilbert = ta.HT_SINE(dataframe)
+    # dataframe['htsine'] = hilbert['sine']
+    # dataframe['htleadsine'] = hilbert['leadsine']
+
+    overlap_studies_df = DataFrame(overlap_studies_data)
+
+    _verify_df_length(df, overlap_studies_df, "overlap_studies")
+    return overlap_studies_df
+
+
 def get_pattern_recognition(df: DataFrame) -> DataFrame:
     pattern_names = talib.get_function_groups()['Pattern Recognition']
     pattern_data = [None] * len(pattern_names)
-    print(f"Number of patterns: {len(pattern_names)}")
 
     for idx, pattern in enumerate(pattern_names):
         # below is same as;
@@ -108,7 +165,6 @@ def _get_pattern_one_hot(pattern_data: list, candle_names: list):
         patterns.append(best_pattern)
 
     pattern_df = DataFrame(patterns, columns=pattern_embedding)
-    print("ONE-HOT CONVERSION COMPLETE")
 
     return pattern_df
 
@@ -139,7 +195,6 @@ def _get_pattern_sparse2dense(pattern_data: list, candle_names: list):
         patterns.append([pattern_count, best_pattern])
 
     pattern_df = DataFrame(patterns, columns=["pattern_count", "pattern_detected"])
-    print("PATTERN SPARSE TO DENSE CONVERSION COMPLETE")
 
     return pattern_df
 
@@ -149,6 +204,7 @@ def get_volume_bin(df: DataFrame, use_natural_breaks=True) -> DataFrame:
         # This takes some time, so I ran it once and save the classes to a constant
         # import jenkspy
         # NATURAL_VOLUME_BREAKS = jenkspy.jenks_breaks(df["volume"], nb_class=num_breaks)
+        # print(NATURAL_VOLUME_BREAKS)
         num_breaks = len(NATURAL_VOLUME_BREAKS) - 1
 
         volume_bin_data = pd.cut(
@@ -169,13 +225,19 @@ def get_volume_bin(df: DataFrame, use_natural_breaks=True) -> DataFrame:
         return volume_bin_data
 
     volume_bin_df = natural_breaks(df) if use_natural_breaks else quantile_breaks(df)
-    volume_bin_df = volume_bin_df.rename("volume_bin")
+    volume_bin_df = volume_bin_df.rename("volume_bin").to_frame()
 
     _verify_df_length(df, volume_bin_df, "volume_bin")
     return volume_bin_df
 
 
+def _transpose_and_add(data_map: dict, key: str, df: DataFrame):
+    data_map[key] = np.array(df).T.tolist()
+
+
 def _verify_df_length(original_df: DataFrame, feature_df: DataFrame, feature_name: str):
+    print(f"Number of {feature_name}: {len(feature_df.columns)}")
+
     assert len(original_df) == len(feature_df), \
         f"The original dataframe and the {feature_name} dataframe are different lengths. original_df " \
         f"[{len(original_df)}] != feature_df [{len(feature_df)}]. They cannot be combined"

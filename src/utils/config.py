@@ -13,14 +13,14 @@ TEST_DATASET_FILENAME = "test/data.json"
 
 # TRAIN_DATASET_FILENAME = "train.csv"
 # TEST_DATASET_FILENAME = "test.csv"
-DATASET_FREQ = "5min"
+DATASET_FREQ = "1min"
 
 FREQTRADE_USER_DATA_DIR = Path("freqtrade") / "user_data"
 # Cannot be longer than 499 because freqtrader doesn't have dataframes available to the strategy beyond that.
 # https://github.com/freqtrade/freqtrade-strategies/issues/79
 FREQTRADE_MAX_CONTEXT = 499
 
-CRYPTO_PAIR = "BTC/USDT"
+CRYPTO_PAIR = "ETH/USDT"
 
 # If you permanently update these values, then you should also update the MODEL_VERSION
 # https://docs.aws.amazon.com/sagemaker/latest/dg/deepar_hyperparameters.html
@@ -46,8 +46,8 @@ _MODERATE_HYPER_PARAMETERS = {
     'epochs': 4,
     'batch_size': 32,
     'num_batches_per_epoch': 100,
-    'prediction_length': 3,
-    'context_length': 12*6,
+    'prediction_length': 5,
+    'context_length': 60,
     'num_layers': 6,
     'num_cells': 120,
     'dropout_rate': 0.1525,

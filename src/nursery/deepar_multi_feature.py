@@ -6,9 +6,12 @@
 import os
 import io
 
-import pandas as pd
-import argparse
+import mxnet
+import gluonts
 import json
+import argparse
+
+import pandas as pd
 import numpy as np
 
 from typing import List, Tuple, Union
@@ -23,9 +26,8 @@ from gluonts.evaluation import Evaluator
 from gluonts.model.predictor import Predictor
 from gluonts.model.forecast import Config, Forecast
 from gluonts.dataset.common import DataEntry, ListDataset, load_datasets
-from gluonts.mx.distribution import LogitNormalOutput, PoissonOutput
+from gluonts.mx.distribution import PoissonOutput
 from gluonts.mx.trainer import Trainer
-import mxnet as mx
 from mxnet.runtime import feature_list
 
 from utils import config
@@ -50,10 +52,6 @@ def train(model_args):
     train_dataset_length = int(next(feat.cardinality
                                     for feat in datasets.metadata.feat_static_cat if feat.name == "ts_train_length"))
 
-    cardinality = int(next(feat.cardinality
-                           for feat in datasets.metadata.feat_static_cat if feat.name == "num_series"))
-    print(f"Cardinality of static category features is : {cardinality}")
-
     if not model_args.num_batches_per_epoch:
         model_args.num_batches_per_epoch = train_dataset_length // model_args.batch_size
         print(f"Defaulting num_batches_per_epoch to: [{model_args.num_batches_per_epoch}] "
@@ -61,16 +59,17 @@ def train(model_args):
 
     estimator = DeepAREstimator(
         freq=config.DATASET_FREQ,
-        batch_size=model_args.batch_size,
-        context_length=model_args.context_length,
+        # batch_size=model_args.batch_size,
+        # context_length=model_args.context_length,
         prediction_length=model_args.prediction_length,
         # dropout_rate=model_args.dropout_rate,
         # num_layers=model_args.num_layers,
         # num_cells=model_args.num_cells,
 
         # dropoutcell_type='VariationalDropoutCell',
-        use_feat_static_cat=True,
-        cardinality=[cardinality],
+        use_feat_dynamic_real=True,
+        # distr_output=PoissonOutput(),
+        # distr_output=LogitNormalOutput(),
 
         trainer=Trainer(
             epochs=model_args.epochs,
@@ -81,8 +80,7 @@ def train(model_args):
     )
 
     # Train the model
-    predictor = estimator.train(
-        training_data=datasets.train)
+    predictor = estimator.train(training_data=datasets.train)
 
     # Evaluate trained model on test data. This will serialize each of the agg_metrics into a well formatted log.
     # We use this to capture the metrics needed for hyperparameter tuning
@@ -210,8 +208,10 @@ def _output_fn(
 def _describe_model(model_args):
     print(f"Using the follow arguments: [{model_args}]")
 
-    print(f"MXNet version [{mx.__version__}]")
-    print(f"Number of GPUs available [{mx.context.num_gpus()}]")
+    print(f"The model id is [{config.MODEL_ID}]")
+    print(f"The MXNet version is [{mxnet.__version__}]")
+    print(f"The GluonTS version is [{gluonts.__version__}]")
+    print(f"The GPU count is [{mxnet.context.num_gpus()}]")
     print(f"{feature_list()}")
 
 
@@ -268,7 +268,6 @@ def _vertical_split(df, context_length, prediction_length):
         ],
         freq=config.DATASET_FREQ
     )
-
 
     dataset_length = len(next(iter(dataset))["target"])
 

@@ -124,8 +124,9 @@ class SampleStrategy(IStrategy):
 
         # Essentially replicate what mf.marshal_candles is doing. This is so we have all the same values for inference
         # as the ones used for training
-        dataframe = dataframe.round(2)
-        dataframe = mf.add_technical_indicator_features(dataframe)
+        # dataframe = dataframe.round(2)
+        # dataframe = mf.add_technical_indicator_features(dataframe)
+        dataframe = mf.marshal_candles(dataframe)
 
         return dataframe
 
@@ -262,7 +263,7 @@ class SampleStrategy(IStrategy):
         dataframe['sar'] = ta.SAR(dataframe)
 
         # TEMA - Triple Exponential Moving Average
-        dataframe['tema'] = ta.TEMA(dataframe, timeperiod=9)
+        dataframe['tema'] = ta.TEMA(dataframe, timeperiod=12*6)
 
         # Cycle Indicator
         # ------------------------------------

@@ -22,4 +22,4 @@ class DateSplitter(AbstractBaseSplitter, pydantic.BaseModel):
             self, item: TimeSeriesSlice, offset: int = 0
     ) -> TimeSeriesSlice:
         freq = item.start.freqstr
-        return item[: self.split_date + pd.Timedelta(self.prediction_length + offset, freq=freq)]
+        return item[: self.split_date + pd.Timedelta(self.prediction_length + offset, freq="1min")]

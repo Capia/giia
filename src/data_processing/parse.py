@@ -40,8 +40,7 @@ class Parse:
         self.logger.log(df.head(1), newline=True)
         self.logger.log("Last sample:")
         self.logger.log(df.tail(1), newline=True)
-        self.logger.log(f"Number of columns: {len(df.columns)}")
-        self.logger.log(df, newline=True)
+        self.logger.log(f"Number of raw columns: {len(df.columns)}")
 
         # Configure fractions to split dataset between training and testing (validation can be added easily)
         fractions = np.array([0.7, 0.3])
@@ -53,15 +52,23 @@ class Parse:
         # Save df to file to make it easy to visualize/debug. Test df is used as it is smaller and more portable
         test_df.to_csv("test.csv")
 
-        train_dataset = self.df_to_multi_feature_dataset(train_df)
-        test_dataset = self.df_to_multi_feature_dataset(test_df)
+        feature_columns = self._get_feature_columns(df)
+        train_dataset = self.df_to_multi_feature_dataset(train_df, feature_columns)
+        test_dataset = self.df_to_multi_feature_dataset(test_df, feature_columns)
 
-        datasets = self.build_train_datasets(train_df, train_dataset, test_df, test_dataset)
+        datasets = self.build_train_datasets(train_df, train_dataset, test_df, test_dataset, feature_columns)
 
         datasets.save(str(dataset_dir_path))
         self.logger.log(f"Parsed train and test datasets can be found in [{dataset_dir_path}]", 'debug')
 
     def df_to_covariate_dataset(self, df):
+        covariate_blacklist = ["volume"]
+        feature_columns = []
+
+        for column_name in df.columns:
+            if column_name not in covariate_blacklist:
+                feature_columns.append(column_name)
+
         return ListDataset(
             [
                 {
@@ -69,23 +76,12 @@ class Parse:
                     FieldName.TARGET: df[column_name][:].values,
                     FieldName.ITEM_ID: column_name,
                     FieldName.FEAT_STATIC_CAT: np.array([idx]),
-                } for idx, column_name in enumerate(df.columns)
+                } for idx, column_name in enumerate(feature_columns)
             ],
             freq=config.DATASET_FREQ
         )
 
-    def df_to_multi_feature_dataset(self, df):
-        # dynamic_cat_features = ["candlestick_pattern"]
-        # dynamic_real_features = ["open", "high", "low", "volume", "candlestick_pattern"]
-        dynamic_real_features_blacklist = ["close", "volume"]
-        feature_columns = []
-
-        for column_name in df.columns:
-            if column_name not in dynamic_real_features_blacklist:
-                feature_columns.append(column_name)
-
-        print(feature_columns)
-
+    def df_to_multi_feature_dataset(self, df, feature_columns):
         return ListDataset(
             [
                 {
@@ -95,36 +91,32 @@ class Parse:
                     FieldName.FEAT_DYNAMIC_REAL: [
                         df[column_name][:].values for column_name in feature_columns
                     ],
-                    # FieldName.FEAT_DYNAMIC_REAL: [
-                    #     df[column_name][:].values for column_name in df.columns if column_name in dynamic_real_features
-                    # ],
-                    # FieldName.FEAT_DYNAMIC_CAT: [
-                    #     df[column_name][:].values for column_name in df.columns if column_name in dynamic_cat_features
-                    # ],
                 }
             ],
             freq=config.DATASET_FREQ
         )
 
-    def df_to_multivariate_target_dataset(self, df):
+    def df_to_multivariate_target_dataset(self, df, feature_columns):
+        feature_columns.append("close")
+
         return ListDataset(
             [
                 {
                     FieldName.START: df.index[0],
-                    FieldName.TARGET: [df[column_name][:].values for column_name in df.columns],
+                    FieldName.TARGET: [df[column_name][:].values for column_name in feature_columns],
                 }
             ],
             freq=config.DATASET_FREQ,
             one_dim_target=False
         )
 
-    def build_train_datasets(self, train_df, train_dataset, test_df, test_dataset):
+    def build_train_datasets(self, train_df, train_dataset, test_df, test_dataset, feature_columns):
         return TrainDatasets(
             metadata=MetaData(
                 freq=config.DATASET_FREQ,
                 # target={'name': 'close'},
                 feat_static_cat=[
-                    CategoricalFeatureInfo(name="num_series", cardinality=len(train_df.columns)),
+                    CategoricalFeatureInfo(name="num_series", cardinality=len(feature_columns)),
 
                     # Not features actually used by the network. Just storing the metadata so it doesn't have to
                     # be calculated later with an iterator
@@ -137,3 +129,14 @@ class Parse:
             train=train_dataset,
             test=test_dataset
         )
+
+    def _get_feature_columns(self, df):
+        covariate_blacklist = ["close", "volume"]
+        feature_columns = []
+
+        for column_name in df.columns:
+            if column_name not in covariate_blacklist:
+                feature_columns.append(column_name)
+
+        self.logger.log(f"Number of feature columns: {len(feature_columns)}")
+        return feature_columns

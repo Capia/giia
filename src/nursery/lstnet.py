@@ -75,7 +75,7 @@ def train(model_args):
     estimator = GPVAREstimator(
         freq=config.DATASET_FREQ,
         batch_size=model_args.batch_size,
-        context_length=model_args.past_length,
+        context_length=model_args.context_length,
         prediction_length=model_args.prediction_length,
         target_dim=num_series,
 
@@ -307,7 +307,7 @@ def parse_args():
     parser.add_argument('--epochs', type=int, default=config.HYPER_PARAMETERS["epochs"])
     parser.add_argument('--batch_size', type=int, default=config.HYPER_PARAMETERS["batch_size"])
     parser.add_argument('--prediction_length', type=int, default=config.HYPER_PARAMETERS["prediction_length"])
-    parser.add_argument('--past_length', type=int, default=config.HYPER_PARAMETERS["past_length"])
+    parser.add_argument('--context_length', type=int, default=config.HYPER_PARAMETERS["context_length"])
     parser.add_argument('--num_layers', type=int, default=config.HYPER_PARAMETERS["num_layers"])
     parser.add_argument('--num_cells', type=int, default=config.HYPER_PARAMETERS["num_cells"])
     parser.add_argument('--dropout_rate', type=float, default=config.HYPER_PARAMETERS["dropout_rate"])
