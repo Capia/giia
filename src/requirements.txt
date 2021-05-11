@@ -7,7 +7,6 @@ numpy==1.19.5
 pandas==1.1.5
 s3fs==0.4.2
 sagemaker==2.33.0
-scipy==1.6.2
 jenkspy==0.2.0
 
 # Master currently has features that solve several bugs and improves performance drastically. However, there is not

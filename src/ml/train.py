@@ -22,7 +22,7 @@ class Train:
 
     def create_model(self, role, instance_type: str, sagemaker_session: Session, kwargs):
         estimator = MXNet(
-            entry_point='deepstate.py',
+            entry_point='deepar_dynamic_real.py',
             source_dir=os.getcwd(),
             role=role,
             instance_type=instance_type,
@@ -51,7 +51,7 @@ class Train:
         hp = {
             'epochs': config.HYPER_PARAMETERS['epochs'],
             'batch_size': config.HYPER_PARAMETERS['batch_size'],
-            'past_length': config.HYPER_PARAMETERS['past_length'],
+            'context_length': config.HYPER_PARAMETERS['context_length'],
             'prediction_length': config.HYPER_PARAMETERS['prediction_length'],
             'num_layers': config.HYPER_PARAMETERS['num_layers'],
             'num_cells': config.HYPER_PARAMETERS['num_cells'],

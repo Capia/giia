@@ -2,7 +2,7 @@
 from pathlib import Path
 
 MODEL_NAME = "giia"
-MODEL_VERSION = "0.5.8"
+MODEL_VERSION = "0.6.2"
 MODEL_ID = f"{MODEL_NAME}-{MODEL_VERSION}"
 
 SM_ROLE = 'arn:aws:iam::941048668662:role/service-role/AmazonSageMaker-ExecutionRole-20191206T145896'
@@ -25,16 +25,16 @@ CRYPTO_PAIR = "ETH/USDT"
 # If you permanently update these values, then you should also update the MODEL_VERSION
 # https://docs.aws.amazon.com/sagemaker/latest/dg/deepar_hyperparameters.html
 _PROD_HYPER_PARAMETERS = {
-    'epochs': 10,
+    'epochs': 4,
     'batch_size': 128,
-    'prediction_length': 8,
+    'prediction_length': 5,
 
     # This cannot be longer than `FREQTRADE_MAX_CONTEXT`
     # Also, this significantly increases memory usage. Beware
-    'context_length': 144,
+    'context_length': 60,
 
     'num_layers': 4,
-    'num_cells': 54,
+    'num_cells': 96,
     'dropout_rate': 0.0528,
     'learning_rate': 0.003
 }
@@ -48,8 +48,8 @@ _MODERATE_HYPER_PARAMETERS = {
     'num_batches_per_epoch': 100,
     'prediction_length': 5,
     'context_length': 60,
-    'num_layers': 6,
-    'num_cells': 120,
+    'num_layers': 4,
+    'num_cells': 85,
     'dropout_rate': 0.1525,
     'learning_rate': 0.001
 }
@@ -70,4 +70,4 @@ _SIMPLE_HYPER_PARAMETERS = {
 
 # DO NOT COMMIT ANY CHANGES TO THIS CONFIG `HYPER_PARAMETERS = _PROD_HYPER_PARAMETERS`. You can change it for testing,
 # just do not commit it
-HYPER_PARAMETERS = _MODERATE_HYPER_PARAMETERS
+HYPER_PARAMETERS = _PROD_HYPER_PARAMETERS

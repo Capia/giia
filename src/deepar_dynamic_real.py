@@ -57,26 +57,35 @@ def train(model_args):
         print(f"Defaulting num_batches_per_epoch to: [{model_args.num_batches_per_epoch}] "
               f"= (length of train dataset [{train_dataset_length}]) / (batch size [{model_args.batch_size}])")
 
+    if mxnet.context.num_gpus():
+        ctx = mxnet.gpu()
+        print("Using GPU context")
+    else:
+        ctx = mxnet.cpu()
+        print("Using CPU context")
+
     estimator = DeepAREstimator(
         freq=config.DATASET_FREQ,
         # batch_size=model_args.batch_size,
         context_length=model_args.context_length,
         prediction_length=model_args.prediction_length,
-        # dropout_rate=model_args.dropout_rate,
-        # num_layers=model_args.num_layers,
-        # num_cells=model_args.num_cells,
+        dropout_rate=model_args.dropout_rate,
+        num_layers=model_args.num_layers,
+        num_cells=model_args.num_cells,
 
         # dropoutcell_type='VariationalDropoutCell',
         use_feat_dynamic_real=True,
-        distr_output=NegativeBinomialOutput(),
+        # Use betaoutput with normalized delta values such open, close, etc (0 through 1)
+        # distr_output=NegativeBinomialOutput(),
         # distr_output=PoissonOutput(),
         # distr_output=LogitNormalOutput(),
 
         trainer=Trainer(
+            ctx=ctx,
             epochs=model_args.epochs,
             batch_size=model_args.batch_size,
             num_batches_per_epoch=model_args.num_batches_per_epoch,
-            # learning_rate=model_args.learning_rate
+            learning_rate=model_args.learning_rate
         )
     )
 
