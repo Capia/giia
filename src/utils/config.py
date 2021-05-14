@@ -26,15 +26,16 @@ CRYPTO_PAIR = "ETH/USDT"
 # https://docs.aws.amazon.com/sagemaker/latest/dg/deepar_hyperparameters.html
 _PROD_HYPER_PARAMETERS = {
     'epochs': 4,
-    'batch_size': 128,
+    'batch_size': 256,
+    'num_batches_per_epoch': 100,
     'prediction_length': 5,
 
     # This cannot be longer than `FREQTRADE_MAX_CONTEXT`
     # Also, this significantly increases memory usage. Beware
     'context_length': 60,
 
-    'num_layers': 4,
-    'num_cells': 96,
+    'num_layers': 8,
+    'num_cells': 200,
     'dropout_rate': 0.0528,
     'learning_rate': 0.003
 }

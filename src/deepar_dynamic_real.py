@@ -26,7 +26,7 @@ from gluonts.evaluation import Evaluator
 from gluonts.model.predictor import Predictor
 from gluonts.model.forecast import Config, Forecast
 from gluonts.dataset.common import DataEntry, ListDataset, load_datasets
-from gluonts.mx.distribution import PoissonOutput, NegativeBinomialOutput
+from gluonts.mx.distribution import PoissonOutput, NegativeBinomialOutput, StudentTOutput
 from gluonts.mx.trainer import Trainer
 from mxnet.runtime import feature_list
 
@@ -57,12 +57,8 @@ def train(model_args):
         print(f"Defaulting num_batches_per_epoch to: [{model_args.num_batches_per_epoch}] "
               f"= (length of train dataset [{train_dataset_length}]) / (batch size [{model_args.batch_size}])")
 
-    if mxnet.context.num_gpus():
-        ctx = mxnet.gpu()
-        print("Using GPU context")
-    else:
-        ctx = mxnet.cpu()
-        print("Using CPU context")
+    ctx = _get_ctx()
+    distr_output = _get_distr_output()
 
     estimator = DeepAREstimator(
         freq=config.DATASET_FREQ,
@@ -72,13 +68,10 @@ def train(model_args):
         dropout_rate=model_args.dropout_rate,
         num_layers=model_args.num_layers,
         num_cells=model_args.num_cells,
+        distr_output=distr_output,
 
         # dropoutcell_type='VariationalDropoutCell',
         use_feat_dynamic_real=True,
-        # Use betaoutput with normalized delta values such open, close, etc (0 through 1)
-        # distr_output=NegativeBinomialOutput(),
-        # distr_output=PoissonOutput(),
-        # distr_output=LogitNormalOutput(),
 
         trainer=Trainer(
             ctx=ctx,
@@ -108,6 +101,27 @@ def train(model_args):
     predictor.serialize(Path(model_args.model_dir))
 
     return predictor
+
+
+def _get_ctx():
+    if mxnet.context.num_gpus():
+        ctx = mxnet.gpu()
+        print("Using GPU context")
+    else:
+        ctx = mxnet.cpu()
+        print("Using CPU context")
+    return ctx
+
+
+def _get_distr_output():
+    # Use betaoutput with normalized delta values such open, close, etc (0 through 1)
+    # distr_output=NegativeBinomialOutput(),
+    # distr_output=PoissonOutput(),
+    # distr_output=LogitNormalOutput(),
+    distr_output = StudentTOutput()
+
+    print(f"Using distr_output [{type(distr_output).__name__}]")
+    return distr_output
 
 
 # Used for inference. Once the model is trained, we can deploy it and this function will load the trained model.

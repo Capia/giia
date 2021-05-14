@@ -75,3 +75,22 @@ class AWSHandler:
         self.logger.log(f"Extract complete")
 
         return local_model_path
+
+    def upload_model_to_s3(self, model_dir_path: Path):
+        model_tar_filename = "model.tar.gz"
+        model_tar_path = model_dir_path.parent / model_tar_filename
+
+        # First compress the model
+        self.logger.log(f"Compressing [{str(model_dir_path)}] to [{str(model_tar_path)}]")
+        with tarfile.open(str(model_tar_path), "w:gz") as tar:
+            tar.add(model_dir_path, arcname=model_dir_path.name)
+        self.logger.log(f"Compress complete")
+
+        # Then upload the compressed model
+        s3_path = f"{model_dir_path.parent.stem}/{model_tar_filename}"
+        fully_qualified_s3_path = f"s3://{self.s3_bucket}/{s3_path}"
+        self.logger.log(f"Uploading [{model_tar_path}] to [{fully_qualified_s3_path}]")
+        self.s3_bucket_resource.upload_file(str(model_tar_path), s3_path)
+        self.logger.log(f"Upload complete")
+
+        return fully_qualified_s3_path
