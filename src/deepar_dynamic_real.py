@@ -2,9 +2,7 @@
 # NOTE: This file must stay at the root of the `./src` directory due to sagemaker-local stripping the path from the
 #  entry_point. Follow this issue for new developments https://github.com/aws/sagemaker-python-sdk/issues/1597
 #
-
 import os
-import io
 
 import mxnet
 import gluonts
@@ -17,15 +15,13 @@ import numpy as np
 from typing import List, Tuple, Union
 from pathlib import Path
 
-from gluonts.dataset.field_names import FieldName
-from gluonts.dataset.split import OffsetSplitter
 from gluonts.dataset.stat import calculate_dataset_statistics
 from gluonts.model.deepar import DeepAREstimator
 from gluonts.evaluation.backtest import backtest_metrics
 from gluonts.evaluation import Evaluator
 from gluonts.model.predictor import Predictor
 from gluonts.model.forecast import Config, Forecast
-from gluonts.dataset.common import DataEntry, ListDataset, load_datasets
+from gluonts.dataset.common import load_datasets
 from gluonts.mx.distribution import PoissonOutput, NegativeBinomialOutput, StudentTOutput
 from gluonts.mx.trainer import Trainer
 from mxnet.runtime import feature_list
@@ -124,64 +120,65 @@ def _get_distr_output():
     return distr_output
 
 
-# Used for inference. Once the model is trained, we can deploy it and this function will load the trained model.
+# Used for inference. Once the model is trained, we can deploy it and this function will load the trained model. No-op
+# implementation as default will properly handle decompressing and deserializing the model
 def model_fn(model_dir):
-    path = Path(model_dir)
-    predictor = Predictor.deserialize(path)
+    print("---1---")
+    print(f"Model dir [{model_dir}]")
+
+    model_dir_path = Path(model_dir) / "model"
+
+    # with tarfile.open(str(model_dir_path / "model.tar.gz"), "r:gz") as tar:
+    #     for member in tar:
+    #         if member.isreg():
+    #             # Flatten directory structure
+    #             print(f"[{member.name}]")
+    #             member.name = Path(member.name).name
+    #             print(f"[{member.name}]")
+    #             print(f"---------------")
+    #             tar.extract(member, path=str(model_dir_path))
+    #     tar.extractall(path=str(model_dir_path))
+
+    predictor = Predictor.deserialize(model_dir_path)
+    print(f"Predictor metadata [{predictor.__dict__}]")
 
     return predictor
 
 
-# Used for inference. If we send requests to the endpoint, the data will by default be encoded as json string. We decode
-# the data from json into a Pandas data frame. We then create the ListDataset and perform inference. The forecasts will
-# be sent back as a json object.
-def transform_fn(
-        model: Predictor,
-        request_body: Union[str, bytes],
-        content_type: str = "application/json",
-        accept_type: str = "application/json",
-        num_samples: int = 1000,
-) -> Union[bytes, Tuple[bytes, str]]:
-    deser_input: List[DataEntry] = _input_fn(request_body, content_type)
-    fcast: List[Forecast] = _predict_fn(deser_input, model, num_samples=num_samples)
-    ser_output: Union[bytes, Tuple[bytes, str]] = _output_fn(fcast, accept_type)
-    return ser_output
+# Used for inference. This is the entry point for sending a request to receive a prediction
+# https://sagemaker.readthedocs.io/en/stable/frameworks/mxnet/using_mxnet.html#serve-an-mxnet-model
+def transform_fn(model, request_body, content_type, accept_type):
+    print("---2---")
+    input_df = _input_fn(request_body, content_type)
+    print(input_df)
+    forecast = _predict_fn(input_df, model, num_samples=100)
+    print(forecast[0])
+    print(forecast)
+    json_output = _output_fn(forecast, accept_type)
+    return json_output
 
 
-# Because of transform_fn(), we cannot use input_fn() as function name
-# Hence, we prefix our helper function with an underscore.
-def _input_fn(request_body: Union[str, bytes], request_content_type: str = "application/json") -> List[DataEntry]:
-    """Deserialize JSON-lines into Python objects.
+def _input_fn(request_body: Union[str, bytes], request_content_type: str = "application/json") -> pd.DataFrame:
+    # byte array of json -> JSON object -> str in JSON format
+    request_json = json.dumps(json.loads(request_body))
+    df = pd.read_json(request_json, orient='split')
+    print("---2.2---")
+    print(df)
 
-    Args:
-        request_body (str): Incoming payload.
-        request_content_type (str, optional): Ignored. Defaults to "".
-
-    Returns:
-        List[DataEntry]: List of GluonTS timeseries.
-    """
-    if isinstance(request_body, bytes):
-        request_body = request_body.decode("utf-8")
-    return [json.loads(line) for line in io.StringIO(request_body)]
+    return df
 
 
-# Because of transform_fn(), we cannot use predict_fn() as function name.
-# Hence, we prefix our helper function with an underscore.
-def _predict_fn(input_object: List[DataEntry], model: Predictor, num_samples=1000) -> List[Forecast]:
-    """Take the deserialized JSON-lines, then perform inference against the loaded model.
+def _predict_fn(input_df: pd.DataFrame, model: Predictor, num_samples=100) -> List[Forecast]:
+    print("---3---")
+    import data_processing.gluonts_helper as gh
+    feature_columns = gh.get_feature_columns(input_df)
+    print(f"Number of feature columns: {len(feature_columns)}")
 
-    Args:
-        input_object (List[DataEntry]): List of GluonTS timeseries.
-        model (Predictor): A GluonTS predictor.
-        num_samples (int, optional): Number of forecast paths for each timeseries. Defaults to 1000.
+    dataset = gh.df_to_multi_feature_dataset(input_df, feature_columns, freq=model.freq)
+    print(f"Dataset length: {len(dataset)}")
 
-    Returns:
-        List[Forecast]: List of forecast results.
-    """
-    # Create ListDataset here, because we need to match their freq with model's freq.
-    X = ListDataset(input_object, freq=model.freq)
-
-    it = model.predict(X, num_samples=num_samples)
+    print(f"Starting prediction...")
+    it = model.predict(dataset, num_samples=num_samples)
     return list(it)
 
 
@@ -191,20 +188,8 @@ def _output_fn(
         forecasts: List[Forecast],
         content_type: str = "application/json",
         config: Config = Config(quantiles=["0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9"]),
-) -> Union[bytes, Tuple[bytes, str]]:
-    """Take the prediction result and serializes it according to the response content type.
-
-    Args:
-        forecasts (List[Forecast]): List of forecast results.
-        content_type (str, optional): Ignored. Defaults to "".
-
-    Returns:
-        List[str]: List of JSON-lines, each denotes forecast results in quantiles.
-    """
-
+) -> Union[str, Tuple[str, str]]:
     # jsonify_floats is taken from gluonts/shell/serve/util.py
-    #
-    # The module depends on flask, and we may not want to import when testing in our own dev env.
     def jsonify_floats(json_object):
         """Traverse through the JSON object and converts non JSON-spec compliant floats(nan, -inf, inf) to string.
 
@@ -227,9 +212,8 @@ def _output_fn(
             return json_object
         return json_object
 
-    str_results = "\n".join((json.dumps(jsonify_floats(forecast.as_json_dict(config))) for forecast in forecasts))
-    bytes_results = str.encode(str_results)
-    return bytes_results, content_type
+    json_forecasts = json.dumps([forecast.as_json_dict(config) for forecast in forecasts])
+    return json_forecasts, content_type
 
 
 def _describe_model(model_args):
@@ -252,61 +236,6 @@ def _get_df_from_dataset_file(dataset_path: Path):
     print(df.describe())
 
     return df
-
-
-def _vertical_split(df, context_length, prediction_length):
-    """
-    Split a dataset time-wise in a train and validation dataset.
-    """
-    offset_from_end = 2 * (context_length + prediction_length)
-
-    dataset = ListDataset(
-        [
-            {
-                FieldName.START: df.index[0],
-                FieldName.TARGET: df['close'][:-prediction_length].values,
-                FieldName.ITEM_ID: "close",
-                FieldName.FEAT_STATIC_CAT: np.array([0]),
-            },
-            {
-                FieldName.START: df.index[0],
-                FieldName.TARGET: df['open'][:-prediction_length].values,
-                FieldName.ITEM_ID: "open",
-                FieldName.FEAT_STATIC_CAT: np.array([1]),
-            },
-            {
-                FieldName.START: df.index[0],
-                FieldName.TARGET: df['high'][:-prediction_length].values,
-                FieldName.ITEM_ID: "high",
-                FieldName.FEAT_STATIC_CAT: np.array([2]),
-            },
-            {
-                FieldName.START: df.index[0],
-                FieldName.TARGET: df['low'][:-prediction_length].values,
-                FieldName.ITEM_ID: "low",
-                FieldName.FEAT_STATIC_CAT: np.array([3]),
-            },
-            {
-                FieldName.START: df.index[0],
-                FieldName.TARGET: df['volume'][:-prediction_length],
-                FieldName.ITEM_ID: "volume",
-                FieldName.FEAT_STATIC_CAT: np.array([4]),
-            },
-        ],
-        freq=config.DATASET_FREQ
-    )
-
-    dataset_length = len(next(iter(dataset))["target"])
-
-    split_offset = dataset_length - offset_from_end
-
-    splitter = OffsetSplitter(
-        prediction_length=offset_from_end,
-        split_offset=split_offset,
-        max_history=offset_from_end)
-
-    (_, train_dataset), (_, validation_dataset) = splitter.split(dataset)
-    return train_dataset, validation_dataset
 
 
 def parse_args():

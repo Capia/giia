@@ -109,6 +109,7 @@ https://aws.amazon.com/blogs/machine-learning/training-debugging-and-running-tim
 https://docs.aws.amazon.com/sagemaker/latest/dg/deepar_hyperparameters.html
 https://github.com/awslabs/sagemaker-deep-demand-forecast
 https://www.freqtrade.io/en/latest/configuration/
+https://towardsdatascience.com/aws-sagemaker-endpoint-as-rest-service-with-api-gateway-48c36a3cf46c
 
 ### Market Viability
 While this will largely be used by the founders of Capia, we believe we can market and sell its predictions to other 
