@@ -146,8 +146,10 @@ def _input_fn(request_body: Union[str, bytes], request_content_type: str = "appl
     request_json = json.dumps(json.loads(request_body))
     df = pd.read_json(request_json, orient='split')
 
-    df = df.drop(['sell', 'buy'], axis=1)
-    # df.index = df.index.tz_localize(None)
+    # Clean dataframe
+    df = df.drop(['sell', 'buy'], axis=1, errors='ignore')
+    df = df.drop(df.filter(regex='mean_close_').columns, axis=1, errors='ignore')
+
     return df
 
 

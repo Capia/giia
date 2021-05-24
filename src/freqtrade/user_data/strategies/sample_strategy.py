@@ -11,13 +11,12 @@ from freqtrade.strategy.interface import IStrategy
 
 # --------------------------------
 # Add your lib to import here
-import talib.abstract as ta
-import freqtrade.vendor.qtpylib.indicators as qtpylib
-
-import data_processing.marshal_features as mf
 import requests
 
-# This class is a sample. Feel free to customize it.
+import data_processing.marshal_features as mf
+from utils import config
+
+
 class SampleStrategy(IStrategy):
     """
     This is a sample strategy to inspire you.
@@ -56,9 +55,6 @@ class SampleStrategy(IStrategy):
     # trailing_stop_positive = 0.01
     # trailing_stop_positive_offset = 0.0  # Disabled / not configured
 
-    # Optimal ticker interval for the strategy.
-    timeframe = '5m'
-
     # Run "populate_indicators()" only for new candle.
     process_only_new_candles = False
 
@@ -68,7 +64,7 @@ class SampleStrategy(IStrategy):
     ignore_roi_if_buy_signal = False
 
     # Number of candles the strategy requires before producing valid signals
-    startup_candle_count: int = 30
+    startup_candle_count = config.FREQTRADE_MAX_CONTEXT
 
     # Optional order type mapping.
     order_types = {
@@ -113,6 +109,56 @@ class SampleStrategy(IStrategy):
         """
         return []
 
+    def get_inference(self, df: DataFrame, is_backtest_mode: bool):
+        import requests
+        import json
+
+        predictor_url = "http://localhost:8080/invocations"
+
+        def get_predictions(raw_df):
+            if isinstance(raw_df, pd.Series):
+                print(f"Have a series, converting to dataframe. (THIS SHOULD ONLY OCCUR IN DRY RUN MODE)")
+                rolled_df = df.loc[raw_df.index]
+            else:
+                rolled_df = raw_df
+
+            payload = rolled_df.to_json(orient='split')
+
+            response = requests.post(predictor_url, data=payload)
+            if response.ok:
+                prediction = json.loads(response.text)
+                # print(prediction)
+                mean_prediction = prediction[0]['mean']
+                # print(mean_prediction[0])
+
+                # Not exactly how pandas rolling + apply is supposed to be used, but it allows us to save multiple
+                # values
+                df.loc[
+                    raw_df.index.max(),
+                    ['mean_close_1', 'mean_close_2', 'mean_close_3', 'mean_close_4', 'mean_close_5']
+                ] = mean_prediction
+                return 0
+            else:
+                print('ERROR')
+                print(response.status_code, response.reason)
+                return 1
+
+        # Only during back-test mode does the full dataframe of history is passed by freqtrade to this function,
+        # while during dry/live mode only 499 (config.FREQTRADE_MAX_CONTEXT) values are passed in.
+        # https://www.freqtrade.io/en/stable/strategy-customization/#anatomy-of-a-strategy
+        if is_backtest_mode:
+            print(f"Running in back test mode")
+
+            # `rolling()` needs to operate on one column to prevent repeating for all columns of the dataframe. It
+            # doesn't matter what column we use since we really only care of about the index (via `raw=False`)
+            df['close']\
+                .rolling(config.FREQTRADE_MAX_CONTEXT)\
+                .apply(get_predictions, raw=False)
+        else:
+            get_predictions(df)
+
+        return df
+
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         """
         Adds several different TA indicators to the given DataFrame
@@ -125,20 +171,16 @@ class SampleStrategy(IStrategy):
         :return: a Dataframe with all mandatory indicators for the strategies
         """
 
-        # Essentially replicate what mf.marshal_candles is doing. This is so we have all the same values for inference
-        # as the ones used for training
-        # dataframe = dataframe.round(2)
-        # dataframe = mf.add_technical_indicator_features(dataframe)
-        dataframe = mf.marshal_candles(dataframe)
+        is_backtest_mode = len(dataframe) > config.FREQTRADE_MAX_CONTEXT
 
-        print(f"Length of dataframe [{len(dataframe)}]")
+        if not metadata.get('already_marshalled', False):
+            dataframe = mf.marshal_candles(dataframe)
 
-        # predictor_url = "http://localhost:8080/endpoints/giia/invocation"
-        # payload = dataframe.to_json()
-        # # payload = json.dumps(dataframe)
-        #
-        # response = requests.post(predictor_url, data=payload)
-        # print(response.status_code, response.reason)
+        # Make probabilistic predictions on the data. This will return `mean` and `quantiles`, which we will add to the
+        # dataframe for the populate_buy/sell_trend functions to play off of
+        # mean_predictions = []
+        # print(dataframe)
+        dataframe = self.get_inference(dataframe, is_backtest_mode)
 
         return dataframe
 
@@ -149,19 +191,20 @@ class SampleStrategy(IStrategy):
         :param metadata: Additional information, like the currently traded pair
         :return: DataFrame with buy column
         """
-        # dataframe.loc[
-        #     (
-        #         (qtpylib.crossed_above(dataframe['rsi'], 30)) &  # Signal: RSI crosses above 30
-        #         (dataframe['tema'] <= dataframe['bb_middleband']) &  # Guard: tema below BB middle
-        #         (dataframe['tema'] > dataframe['tema'].shift(1)) &  # Guard: tema is raising
-        #         (dataframe['volume'] > 0)  # Make sure Volume is not 0
-        #     ),
-        #     'buy'] = 1
-
+        # latest_close = dataframe.tail(1)['close']
+        # prediction = metadata['prediction']
+        # trade = False
+        # for mean_predicted_close in prediction[0]['mean']:
+        #     percent_difference = (abs(mean_predicted_close - latest_close) / latest_close) * 100.0
+        #     if percent_difference > 4:
+        #         trade = True
+        #
+        # if trade:
+        #     dataframe.tail(1)['buy'] = 1
         dataframe.loc[
             (
-                # (dataframe['pattern_detected'] > 0) &
-                (dataframe['volume'] > 0)  # Make sure Volume is not 0
+                    (dataframe['mean_close_1'] > dataframe['close']) &
+                    (dataframe['volume'] > 0)  # Make sure Volume is not 0
             ),
             'buy'] = 1
 
@@ -174,19 +217,21 @@ class SampleStrategy(IStrategy):
         :param metadata: Additional information, like the currently traded pair
         :return: DataFrame with buy column
         """
-        # dataframe.loc[
-        #     (
-        #         (qtpylib.crossed_above(dataframe['rsi'], 70)) &  # Signal: RSI crosses above 70
-        #         (dataframe['tema'] > dataframe['bb_middleband']) &  # Guard: tema above BB middle
-        #         (dataframe['tema'] < dataframe['tema'].shift(1)) &  # Guard: tema is falling
-        #         (dataframe['volume'] > 0)  # Make sure Volume is not 0
-        #     ),
-        #     'sell'] = 1
+        # latest_close = dataframe.tail(1)['close']
+        # prediction = metadata['prediction']
+        # trade = False
+        # for mean_predicted_close in prediction[0]['mean']:
+        #     percent_difference = (abs(mean_predicted_close - latest_close) / latest_close) * 100.0
+        #     if percent_difference > 4:
+        #         trade = True
+        #
+        # if trade:
+        #     dataframe.tail(1)['sell'] = 1
 
         dataframe.loc[
             (
-                    # (dataframe['pattern_detected'] <= 0) &
-                    (dataframe['volume'] > 0)  # Make sure Volume is not 0
+                (dataframe['mean_close_1'] < dataframe['close']) &
+                (dataframe['volume'] > 0)  # Make sure Volume is not 0
             ),
             'sell'] = 1
 
