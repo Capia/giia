@@ -20,6 +20,9 @@ def marshal_candle_metadata(df: DataFrame) -> DataFrame:
 
     # These features are easier to manipulate with an integer index, so we add them before setting the time-series index
     df = add_technical_indicator_features(df)
+    # Some of the indicators have a warm up period where the first n values are NaN. These need to be removed. The
+    # longest warm up period for the given indicators is 33
+    df = df[-33:]
 
     # Index by datetime
     df = df.set_index('date')
@@ -36,12 +39,11 @@ def marshal_candle_metadata(df: DataFrame) -> DataFrame:
     # df['high'] = df['high'].shift(1)
     # df['low'] = df['low'].shift(1)
     # df['volume'] = df['volume'].shift(1)
-    # df = df[-33:]
     # df = df["2019-06-01 00:00:00":]
     # df["hma"] = df["hma"].shift(-1)
     # df["hma_shift"] = df["hma"].shift(-3)
 
-    df = df["2021-01-01 00:00:00":]
+    # df = df["2021-01-01 00:00:00":]
 
     return df
 
@@ -241,3 +243,7 @@ def _verify_df_length(original_df: DataFrame, feature_df: DataFrame, feature_nam
     assert len(original_df) == len(feature_df), \
         f"The original dataframe and the {feature_name} dataframe are different lengths. original_df " \
         f"[{len(original_df)}] != feature_df [{len(feature_df)}]. They cannot be combined"
+
+    # At this point we know the dataframes are the same length. Thus we can now overwrite the integer based index of
+    # the feature dataframe with the datetime based index of the original df, ensuring they line up 1-to-1
+    feature_df.set_index(original_df.index, inplace=True)
