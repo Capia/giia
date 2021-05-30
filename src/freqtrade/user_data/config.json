@@ -104,6 +104,6 @@
     "internals": {
         "process_throttle_secs": 5
     },
-    "strategy": "SampleStrategy",
+    "strategy": "DeepProbabilisticStrategy",
     "strategy_path": "user_data/strategies/"
 }

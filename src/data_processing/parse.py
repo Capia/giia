@@ -33,7 +33,7 @@ class Parse:
             raise ValueError('The candle dataframe is empty. Ensure that you are loading a dataset that has been '
                              'downloaded to the configured location')
 
-        df = mf.marshal_candles(candles)
+        df = mf.marshal_candle_metadata(candles)
 
         self.logger.log("First sample:")
         self.logger.log(df.head(1), newline=True)

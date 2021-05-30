@@ -8,6 +8,7 @@ pandas==1.1.5
 s3fs==0.4.2
 sagemaker==2.40.0
 jenkspy==0.2.0
+tqdm==4.61.0
 
 # Master currently has features that solve several bugs and improves performance drastically. However, there is not
 # an official release for it yet. The official release that will likely contain the changes we need will be 0.7.x

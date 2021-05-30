@@ -154,7 +154,6 @@ def _input_fn(request_body: Union[str, bytes], request_content_type: str = "appl
 
 
 def _predict_fn(input_df: pd.DataFrame, model: Predictor, num_samples=100) -> List[Forecast]:
-    print("---3---")
     import data_processing.gluonts_helper as gh
     feature_columns = gh.get_feature_columns(input_df)
     print(f"Number of feature columns: {len(feature_columns)}")

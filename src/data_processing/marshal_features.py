@@ -14,7 +14,7 @@ NATURAL_VOLUME_BREAKS = [0.0, 604.22808, 1263.66949, 2312.48193, 4048.12917, 724
 #                          2189.231502, 3517.888325, 8277.1723]
 
 
-def marshal_candles(df: DataFrame) -> DataFrame:
+def marshal_candle_metadata(df: DataFrame) -> DataFrame:
     # This should be first as all subsequent feature engineering should be based on the round number
     # df = df.round(2)
 
