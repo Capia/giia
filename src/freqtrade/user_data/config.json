@@ -1,11 +1,12 @@
 {
     "max_open_trades": 5,
-    "stake_currency": "BTC",
-    "stake_amount": 0.01,
-    "tradable_balance_ratio": 0.99,
+    "stake_currency": "USDT",
+    "stake_amount": "unlimited",
+    "tradable_balance_ratio": 0.95,
     "fiat_display_currency": "USD",
     "timeframe": "1m",
     "dry_run": true,
+    "dry_run_wallet": 2000,
     "cancel_open_orders_on_exit": false,
     "unfilledtimeout": {
         "buy": 10,
@@ -91,7 +92,7 @@
     "api_server": {
         "enabled": false,
         "listen_ip_address": "127.0.0.1",
-        "listen_port": 8080,
+        "listen_port": 9080,
         "verbosity": "info",
         "jwt_secret_key": "somethingrandom",
         "CORS_origins": [],
