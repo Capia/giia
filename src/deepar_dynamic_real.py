@@ -148,7 +148,7 @@ def _input_fn(request_body: Union[str, bytes], request_content_type: str = "appl
 
     # Clean dataframe
     df = df.drop(['sell', 'buy'], axis=1, errors='ignore')
-    df = df.drop(df.filter(regex='mean_close_').columns, axis=1, errors='ignore')
+    df = df.drop(df.filter(regex='pred_close_').columns, axis=1, errors='ignore')
 
     return df
 

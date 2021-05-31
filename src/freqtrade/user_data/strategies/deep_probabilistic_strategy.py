@@ -89,15 +89,15 @@ class DeepProbabilisticStrategy(IStrategy):
             if response.ok:
                 prediction = json.loads(response.text)
                 # print(prediction)
-                mean_prediction = prediction[0]['mean']
-                # print(mean_prediction[0])
+                mean_predictions = prediction[0]['mean']
+                # print(mean_predictions[0])
 
                 # Not exactly how pandas rolling + apply is supposed to be used, but it allows us to save multiple
                 # values
                 df.loc[
                     raw_df.index.max(),
-                    ['mean_close_1', 'mean_close_2', 'mean_close_3', 'mean_close_4', 'mean_close_5']
-                ] = mean_prediction
+                    ['pred_close_1', 'pred_close_2', 'pred_close_3', 'pred_close_4', 'pred_close_5']
+                ] = mean_predictions
                 return 0
             else:
                 raise ValueError(f"ERROR: [{response.status_code}] from [{predictor_url}]. REASON: [{response.reason}]")
@@ -115,7 +115,40 @@ class DeepProbabilisticStrategy(IStrategy):
                 .rolling(config.FREQTRADE_MAX_CONTEXT) \
                 .progress_apply(get_predictions, raw=False)
         else:
+            print('Running in dry/live mode')
             get_predictions(df)
+
+        df = self.calc_pred_close_weighted(df)
+        df = self.calc_percent_diff(df)
+        return df
+
+    def calc_pred_close_weighted(self, df: DataFrame) -> DataFrame:
+        # We take a weighted average of all close price predictions for the next time frame (t+1). Given current time
+        # t0, we find the weighted average of the next expected close price (close of t+1) by valuing t0's t+1
+        # prediction more than t-1's t+2 prediction. This continues until t-4's t+5 prediction, which is weighted the
+        # least. The idea here is that there is a higher chance of deviation from current market conditions for
+        # predictions further out. Thus it stands to reason they are least likely to remain accurate and while the
+        # information still may be valuable, it should not be considered as strongly as more current predictions.
+        weights = [1, 0.8, 0.6, 0.4, 0.2]
+
+        df["pred_close_weighted_1"] = \
+            (
+                    (
+                            df['pred_close_1'] * weights[0] +
+                            df['pred_close_2'].shift(1) * weights[1] +
+                            df['pred_close_3'].shift(2) * weights[2] +
+                            df['pred_close_4'].shift(3) * weights[3] +
+                            df['pred_close_5'].shift(4) * weights[4]
+                    )
+                    / sum(weights)
+            )
+
+        return df
+
+    def calc_percent_diff(self, df: DataFrame) -> DataFrame:
+        df["pred_close_diff"] = (
+                (df["close"] - df["pred_close_weighted_1"]) / df["close"] * 100
+        )
 
         return df
 
@@ -135,7 +168,7 @@ class DeepProbabilisticStrategy(IStrategy):
         if metadata.get('run_inference', True):
             dataframe.loc[
                 (
-                        (dataframe['mean_close_1'] > dataframe['close']) &
+                        (dataframe['pred_close_diff'] > 1) &
                         (dataframe['volume'] > 0)  # Make sure Volume is not 0
                 ),
                 'buy'] = 1
@@ -154,7 +187,7 @@ class DeepProbabilisticStrategy(IStrategy):
         if metadata.get('run_inference', True):
             dataframe.loc[
                 (
-                        (dataframe['mean_close_1'] < dataframe['close']) &
+                        (dataframe['pred_close_diff'] < -1) &
                         (dataframe['volume'] > 0)  # Make sure Volume is not 0
                 ),
                 'sell'] = 1

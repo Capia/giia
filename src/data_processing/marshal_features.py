@@ -22,7 +22,7 @@ def marshal_candle_metadata(df: DataFrame) -> DataFrame:
     df = add_technical_indicator_features(df)
     # Some of the indicators have a warm up period where the first n values are NaN. These need to be removed. The
     # longest warm up period for the given indicators is 33
-    df = df[-33:]
+    df = df.iloc[33:]
 
     # Index by datetime
     df = df.set_index('date')
