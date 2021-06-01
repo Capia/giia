@@ -170,8 +170,6 @@ class DeepProbabilisticStrategy(IStrategy):
         df["pred_close_diff_1"] = (
                 (df["pred_close_weighted_1"] - df["close"]) / df["pred_close_weighted_1"] * 100
         )
-        # df["pred_close_diff_1b"] = df[["pred_close_weighted_1", "close"]].pct_change()
-
         df["pred_close_diff_2"] = (
                 (df["pred_close_weighted_2"] - df["close"]) / df["pred_close_weighted_2"] * 100
         )
@@ -199,9 +197,9 @@ class DeepProbabilisticStrategy(IStrategy):
         if metadata.get('run_inference', True):
             dataframe.loc[
                 (
-                        (dataframe['pred_close_diff_1'] > 2) &
-                        (dataframe['pred_close_diff_2'] > 2) &
-                        (dataframe['pred_close_diff_3'] > 2) &
+                        (dataframe['pred_close_diff_1'] > 1) &
+                        (dataframe['pred_close_diff_2'] > 1) &
+                        (dataframe['pred_close_diff_3'] > 1) &
                         (dataframe['volume'] > 0)  # Make sure Volume is not 0
                 ),
                 'buy'] = 1
