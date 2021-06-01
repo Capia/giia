@@ -25,4 +25,19 @@ docker-compose run -w /capia/src/freqtrade --rm freqtrade download-data --timera
 ## Back testing
 ```
 docker-compose run -w /capia/src/freqtrade --rm freqtrade backtesting --export trades --timerange=20210501- -v
+
+# 1 hour worth of data for back testing
+docker-compose run -w /capia/src/freqtrade --rm freqtrade backtesting --export trades --timerange=1619830800-1619834400 -v
+
+# 24 hours worth of data for back testing
+docker-compose run -w /capia/src/freqtrade --rm freqtrade backtesting --export trades --timerange=1619830800-1619917200 -v
+
+# 1 week worth of data for back testing
+docker-compose run -w /capia/src/freqtrade --rm freqtrade backtesting --export trades --timerange=20210501-20210508 -v
+
+# 2 week bear market after ATH
+docker-compose run -w /capia/src/freqtrade --rm freqtrade backtesting --export trades --timerange=20210514-20210530 -v
+
+# 1 day bear market after ATH
+docker-compose run -w /capia/src/freqtrade --rm freqtrade backtesting --export trades --timerange=20210516-20210517 -v
 ```

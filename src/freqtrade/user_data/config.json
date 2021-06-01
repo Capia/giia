@@ -6,8 +6,9 @@
     "fiat_display_currency": "USD",
     "timeframe": "1m",
     "dry_run": true,
-    "dry_run_wallet": 2000,
-    "cancel_open_orders_on_exit": false,
+    "dry_run_wallet": 5000,
+    "cancel_open_orders_on_exit": true,
+    "stoploss": -0.10,
     "unfilledtimeout": {
         "buy": 10,
         "sell": 30

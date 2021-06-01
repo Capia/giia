@@ -150,6 +150,12 @@ def _input_fn(request_body: Union[str, bytes], request_content_type: str = "appl
     df = df.drop(['sell', 'buy'], axis=1, errors='ignore')
     df = df.drop(df.filter(regex='pred_close_').columns, axis=1, errors='ignore')
 
+    # Index by datetime
+    df = df.set_index('date')
+
+    # Then remove UTC timezone since GluonTS does not work with it
+    df.index = df.index.tz_localize(None)
+
     return df
 
 

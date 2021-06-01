@@ -24,12 +24,6 @@ def marshal_candle_metadata(df: DataFrame) -> DataFrame:
     # longest warm up period for the given indicators is 33
     df = df.iloc[33:]
 
-    # Index by datetime
-    df = df.set_index('date')
-
-    # Then remove UTC timezone since GluonTS does not work with it
-    df.index = df.index.tz_localize(None)
-
     # Shift features down one timeframe and pad
     # for column in df.columns:
     #     if column != "hma":
@@ -245,5 +239,5 @@ def _verify_df_length(original_df: DataFrame, feature_df: DataFrame, feature_nam
         f"[{len(original_df)}] != feature_df [{len(feature_df)}]. They cannot be combined"
 
     # At this point we know the dataframes are the same length. Thus we can now overwrite the integer based index of
-    # the feature dataframe with the datetime based index of the original df, ensuring they line up 1-to-1
+    # the feature dataframe with the index of the original df, ensuring they line up 1-to-1
     feature_df.set_index(original_df.index, inplace=True)

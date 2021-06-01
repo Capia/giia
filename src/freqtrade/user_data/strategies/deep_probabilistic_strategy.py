@@ -20,29 +20,26 @@ class DeepProbabilisticStrategy(IStrategy):
 
     # Minimal ROI designed for the strategy.
     # This attribute will be overridden if the config file contains "minimal_roi".
+    # minimal_roi = {
+    #     "60": 0.01,
+    #     "30": 0.02,
+    #     "0": 0.04
+    # }
     minimal_roi = {
+        # "180": 0.01,
         "60": 0.01,
-        "30": 0.02,
+        "20": 0.03,
         "0": 0.04
     }
 
-    # Optimal stoploss designed for the strategy.
-    # This attribute will be overridden if the config file contains "stoploss".
-    stoploss = -0.10
-
     # Trailing stoploss
-    trailing_stop = False
-    # trailing_only_offset_is_reached = False
-    # trailing_stop_positive = 0.01
-    # trailing_stop_positive_offset = 0.0  # Disabled / not configured
+    trailing_stop = True
+    trailing_stop_positive = 0.02
+    trailing_stop_positive_offset = 0.03
+    trailing_only_offset_is_reached = True
 
     # Run "populate_indicators()" only for new candle.
     process_only_new_candles = False
-
-    # These values can be overridden in the "ask_strategy" section in the config.
-    use_sell_signal = True
-    sell_profit_only = False
-    ignore_roi_if_buy_signal = False
 
     # Number of candles the strategy requires before producing valid signals
     startup_candle_count = config.FREQTRADE_MAX_CONTEXT
@@ -107,6 +104,9 @@ class DeepProbabilisticStrategy(IStrategy):
         # https://www.freqtrade.io/en/stable/strategy-customization/#anatomy-of-a-strategy
         if is_backtest_mode:
             print('Running in back test mode')
+            total_num_iterations = len(df) - config.FREQTRADE_MAX_CONTEXT + 1
+            print(f"Total number of iterations: [{total_num_iterations}]")
+
             tqdm.pandas()  # to support the `progress_apply` below
 
             # `rolling()` needs to operate on one column to prevent repeating for all columns of the dataframe. It
@@ -143,11 +143,40 @@ class DeepProbabilisticStrategy(IStrategy):
                     / sum(weights)
             )
 
+        df["pred_close_weighted_2"] = \
+            (
+                    (
+                            df['pred_close_2'] * weights[0] +
+                            df['pred_close_3'].shift(1) * weights[1] +
+                            df['pred_close_4'].shift(2) * weights[2] +
+                            df['pred_close_5'].shift(3) * weights[3]
+                    )
+                    / sum(weights[:-1])
+            )
+
+        df["pred_close_weighted_3"] = \
+            (
+                    (
+                            df['pred_close_3'] * weights[0] +
+                            df['pred_close_4'].shift(1) * weights[1] +
+                            df['pred_close_5'].shift(2) * weights[2]
+                    )
+                    / sum(weights[:-2])
+            )
+
         return df
 
     def calc_percent_diff(self, df: DataFrame) -> DataFrame:
-        df["pred_close_diff"] = (
-                (df["close"] - df["pred_close_weighted_1"]) / df["close"] * 100
+        df["pred_close_diff_1"] = (
+                (df["pred_close_weighted_1"] - df["close"]) / df["pred_close_weighted_1"] * 100
+        )
+        # df["pred_close_diff_1b"] = df[["pred_close_weighted_1", "close"]].pct_change()
+
+        df["pred_close_diff_2"] = (
+                (df["pred_close_weighted_2"] - df["close"]) / df["pred_close_weighted_2"] * 100
+        )
+        df["pred_close_diff_3"] = (
+                (df["pred_close_weighted_3"] - df["close"]) / df["pred_close_weighted_3"] * 100
         )
 
         return df
@@ -156,9 +185,11 @@ class DeepProbabilisticStrategy(IStrategy):
         is_backtest_mode = len(dataframe) > config.FREQTRADE_MAX_CONTEXT
 
         if metadata.get('marshal_candle_metadata', True):
+            print("Running [marshal_candle_metadata]")
             dataframe = mf.marshal_candle_metadata(dataframe)
 
         if metadata.get('run_inference', True):
+            print("Running [run_inference]")
             dataframe = self.run_inference(dataframe, is_backtest_mode)
 
         print("Finished populating indicators")
@@ -168,7 +199,9 @@ class DeepProbabilisticStrategy(IStrategy):
         if metadata.get('run_inference', True):
             dataframe.loc[
                 (
-                        (dataframe['pred_close_diff'] > 1) &
+                        (dataframe['pred_close_diff_1'] > 2) &
+                        (dataframe['pred_close_diff_2'] > 2) &
+                        (dataframe['pred_close_diff_3'] > 2) &
                         (dataframe['volume'] > 0)  # Make sure Volume is not 0
                 ),
                 'buy'] = 1
@@ -187,7 +220,9 @@ class DeepProbabilisticStrategy(IStrategy):
         if metadata.get('run_inference', True):
             dataframe.loc[
                 (
-                        (dataframe['pred_close_diff'] < -1) &
+                        (dataframe['pred_close_diff_1'] < 1) &
+                        (dataframe['pred_close_diff_2'] < 1) &
+                        (dataframe['pred_close_diff_3'] < 1) &
                         (dataframe['volume'] > 0)  # Make sure Volume is not 0
                 ),
                 'sell'] = 1
