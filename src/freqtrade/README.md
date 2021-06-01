@@ -23,6 +23,24 @@ docker-compose run -w /capia/src/freqtrade --rm freqtrade download-data --timera
 ```
 
 ## Back testing
+There are two ways to run back testing. The first is the most development friendly way as it allows you to iterate 
+quickly. Familiarize yourself with the `src/freqtrade/user_data/notebooks/strategy_analysis.ipynb` notebook.
+This notebook enables you too easily:
+- test different indicators 
+- test the process of making a prediction
+- visualize the data
+- develop your strategy
+- back test your strategy
+- visualize your strategies performance
+
+The relevant piece of this notebook is being able to generate the indicators and predictions separately from running a 
+back test. Thus, you can generate your data _only once_ (which is the most compute intensive), then back test based on 
+that data. Now you can test changes to the strategy without waiting for the same data to generate each time.
+
+You can also run back testing through freqtrade's CLI, however, it generates indicators and predictions every time it 
+runs. So if you are iterating on the strategy, without make changes to the indicator or model, then this method is 
+inefficient as it is repeating most of the heavy work. Nevertheless, here are several common commands one can use to 
+back test your strategy:
 ```
 docker-compose run -w /capia/src/freqtrade --rm freqtrade backtesting --export trades --timerange=20210501- -v
 

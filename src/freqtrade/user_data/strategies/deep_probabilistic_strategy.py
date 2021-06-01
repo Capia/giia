@@ -28,11 +28,13 @@ class DeepProbabilisticStrategy(IStrategy):
     minimal_roi = {
         # "180": 0.01,
         "60": 0.01,
-        "20": 0.03,
-        "0": 0.04
+        "10": 0.02,
+        "5": 0.03,
+        "0": 0.05
     }
 
     # Trailing stoploss
+    stoploss = -0.02
     trailing_stop = True
     trailing_stop_positive = 0.02
     trailing_stop_positive_offset = 0.03
@@ -197,9 +199,9 @@ class DeepProbabilisticStrategy(IStrategy):
         if metadata.get('run_inference', True):
             dataframe.loc[
                 (
-                        (dataframe['pred_close_diff_1'] > 1) &
-                        (dataframe['pred_close_diff_2'] > 1) &
-                        (dataframe['pred_close_diff_3'] > 1) &
+                        (dataframe['pred_close_diff_1'] > 4) &
+                        (dataframe['pred_close_diff_2'] > 4) &
+                        (dataframe['pred_close_diff_3'] > 4) &
                         (dataframe['volume'] > 0)  # Make sure Volume is not 0
                 ),
                 'buy'] = 1

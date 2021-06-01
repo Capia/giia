@@ -24,20 +24,11 @@ def marshal_candle_metadata(df: DataFrame) -> DataFrame:
     # longest warm up period for the given indicators is 33
     df = df.iloc[33:]
 
-    # Shift features down one timeframe and pad
-    # for column in df.columns:
-    #     if column != "hma":
-    #         df[column].shift(30)
-    #         print(f"shifted {column}")
-    # df['open'] = df['open'].shift(1)
-    # df['high'] = df['high'].shift(1)
-    # df['low'] = df['low'].shift(1)
-    # df['volume'] = df['volume'].shift(1)
-    # df = df["2019-06-01 00:00:00":]
-    # df["hma"] = df["hma"].shift(-1)
-    # df["hma_shift"] = df["hma"].shift(-3)
+    # Index by datetime
+    df = df.set_index('date', drop=False)
 
-    # df = df["2021-01-01 00:00:00":]
+    # Then remove UTC timezone since GluonTS does not work with it
+    df.index = df.index.tz_localize(None)
 
     return df
 
