@@ -220,9 +220,9 @@ class DeepProbabilisticStrategy(IStrategy):
         if metadata.get('run_inference', True):
             dataframe.loc[
                 (
-                        (dataframe['pred_close_diff_1'] < 1) &
-                        (dataframe['pred_close_diff_2'] < 1) &
-                        (dataframe['pred_close_diff_3'] < 1) &
+                        (dataframe['pred_close_diff_1'] < 4) &
+                        (dataframe['pred_close_diff_2'] < 4) &
+                        (dataframe['pred_close_diff_3'] < 4) &
                         (dataframe['volume'] > 0)  # Make sure Volume is not 0
                 ),
                 'sell'] = 1
