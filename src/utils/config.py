@@ -44,13 +44,13 @@ _PROD_HYPER_PARAMETERS = {
 # these HPs can be used to get a general idea of how well the model may perform with PROD HPs, without the longer
 # wait time
 _MODERATE_HYPER_PARAMETERS = {
-    'epochs': 4,
+    'epochs': 2,
     'batch_size': 32,
     'num_batches_per_epoch': 100,
     'prediction_length': 5,
     'context_length': 60,
-    'num_layers': 4,
-    'num_cells': 85,
+    'num_layers': 3,
+    'num_cells': 65,
     'dropout_rate': 0.1525,
     'learning_rate': 0.001
 }
@@ -71,4 +71,4 @@ _SIMPLE_HYPER_PARAMETERS = {
 
 # DO NOT COMMIT ANY CHANGES TO THIS CONFIG `HYPER_PARAMETERS = _PROD_HYPER_PARAMETERS`. You can change it for testing,
 # just do not commit it
-HYPER_PARAMETERS = _PROD_HYPER_PARAMETERS
+HYPER_PARAMETERS = _MODERATE_HYPER_PARAMETERS

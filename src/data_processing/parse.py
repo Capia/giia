@@ -24,21 +24,23 @@ class Parse:
         freqtrade_config = Configuration({"user_data_dir": config.FREQTRADE_USER_DATA_DIR})
         freqtrade_config = freqtrade_config.load_from_files([str(config.FREQTRADE_USER_DATA_DIR / "config.json")])
 
+        data_dir = config.FREQTRADE_USER_DATA_DIR / "data" / "binance"
         candles = load_pair_history(
-            datadir=config.FREQTRADE_USER_DATA_DIR / "data" / "binance",
+            datadir=data_dir,
             timeframe=freqtrade_config["timeframe"],
             pair=config.CRYPTO_PAIR)
 
         if candles.empty:
-            raise ValueError('The candle dataframe is empty. Ensure that you are loading a dataset that has been '
-                             'downloaded to the configured location')
+            raise ValueError("The candle dataframe is empty. Ensure that you are loading a dataset that has been "
+                             f"downloaded to [{data_dir}]")
 
-        df = mf.marshal_candle_metadata(candles)
+        df = mf.marshal_candle_metadata(candles, drop_date_column=True)
 
         self.logger.log("First sample:")
         self.logger.log(df.head(1), newline=True)
         self.logger.log("Last sample:")
         self.logger.log(df.tail(1), newline=True)
+        self.logger.log(f"Number of rows: {len(df)}")
         self.logger.log(f"Number of raw columns: {len(df.columns)}")
 
         # Configure fractions to split dataset between training and testing (validation can be added easily)

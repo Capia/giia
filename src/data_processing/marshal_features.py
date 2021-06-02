@@ -9,12 +9,12 @@ from pandas import DataFrame, concat
 from data_processing.candle_rankings import candle_rankings_2
 
 # NATURAL_VOLUME_BREAKS = [0.0, 125.416263, 298.632517, 608.76506, 1197.486795, 2445.284399, 8277.1723]
-NATURAL_VOLUME_BREAKS = [0.0, 604.22808, 1263.66949, 2312.48193, 4048.12917, 7249.01953, 23620.74111]
+NATURAL_VOLUME_BREAKS = [0.0, 604.22808, 1263.66949, 2312.48193, 4048.12917, 7249.01953, 35632.59882]
 # NATURAL_VOLUME_BREAKS = [0.0, 69.912673, 148.257113, 252.325899, 402.375676, 621.793142, 946.410967, 1432.262112,
 #                          2189.231502, 3517.888325, 8277.1723]
 
 
-def marshal_candle_metadata(df: DataFrame) -> DataFrame:
+def marshal_candle_metadata(df: DataFrame, drop_date_column=False) -> DataFrame:
     # This should be first as all subsequent feature engineering should be based on the round number
     # df = df.round(2)
 
@@ -25,7 +25,7 @@ def marshal_candle_metadata(df: DataFrame) -> DataFrame:
     df = df.iloc[33:]
 
     # Index by datetime
-    df = df.set_index('date', drop=False)
+    df = df.set_index('date', drop=drop_date_column)
 
     # Then remove UTC timezone since GluonTS does not work with it
     df.index = df.index.tz_localize(None)
