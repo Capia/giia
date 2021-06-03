@@ -37,8 +37,6 @@ def df_to_multi_feature_dataset(df, feature_columns, freq=config.DATASET_FREQ):
 
 
 def df_to_multivariate_target_dataset(df, feature_columns, freq=config.DATASET_FREQ):
-    feature_columns.append("close")
-
     return ListDataset(
         [
             {
@@ -72,10 +70,13 @@ def build_train_datasets(train_df, train_dataset, test_df, test_dataset, feature
     )
 
 
-def get_feature_columns(df):
-    covariate_blacklist = ["close", "volume"]
-    feature_columns = []
+def get_feature_columns(df, exclude_close=True):
+    covariate_blacklist = ["volume"]
+    if exclude_close:
+        covariate_blacklist.append("close")
 
+    print(f"covariate_blacklist = [{covariate_blacklist}]")
+    feature_columns = []
     for column_name in df.columns:
         if column_name not in covariate_blacklist:
             feature_columns.append(column_name)

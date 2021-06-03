@@ -12,15 +12,15 @@ tqdm==4.61.0
 
 # Master currently has features that solve several bugs and improves performance drastically. However, there is not
 # an official release for it yet. The official release that will likely contain the changes we need will be 0.7.x
-# gluonts==0.6.7
-git+https://github.com/awslabs/gluon-ts@master#egg=gluonts
+gluonts==0.7.4
+# git+https://github.com/awslabs/gluon-ts@master#egg=gluonts
 
 nbstripout==0.3.9
 
 ## Note: there are two packages that you should install manually. However, the versions provided here are the
 ## recommended version to install. KEEP THEM UPDATED
 
-# mxnet==1.7.* or mxnet-cu101==1.7.*
+# mxnet==1.8.* or mxnet-cu101==1.8.*
 ## Sagemaker's images come with the appropriate mxnet version (CPU or GPU based). Though if you are running this
 ## locally, be sure to install the version you machine is compatible with. Lastly, the version pinned here should be
 ## the same version found in train.py

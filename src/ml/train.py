@@ -21,12 +21,12 @@ class Train:
 
     def create_model(self, role, instance_type: str, sagemaker_session: Session, kwargs):
         estimator = MXNet(
-            entry_point='deepar_dynamic_real.py',
+            entry_point='lstnet_multi_variate.py',
             source_dir=os.getcwd(),
             role=role,
             instance_type=instance_type,
             instance_count=1,
-            framework_version='1.7.0',  # Should be the same mxnet X.X.X version found in requirements.txt
+            framework_version='1.8.0',  # Should be the same mxnet X.X.X version found in requirements.txt
             py_version='py3',
             sagemaker_session=sagemaker_session,
             enable_sagemaker_metrics=True,

@@ -221,18 +221,6 @@ def _describe_model(model_args):
     print(f"{feature_list()}")
 
 
-def _get_df_from_dataset_file(dataset_path: Path):
-    df = pd.read_csv(filepath_or_buffer=dataset_path, header=0, index_col=0)
-
-    print(f"First {dataset_path} sample:")
-    print(df.head(1))
-    print(f"\nLast {dataset_path} sample:")
-    print(df.tail(1))
-    print(df.describe())
-
-    return df
-
-
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--epochs', type=int, default=config.HYPER_PARAMETERS["epochs"])

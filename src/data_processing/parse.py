@@ -16,7 +16,7 @@ class Parse:
     def __init__(self, logger: LoggerUtil):
         self.logger = logger
 
-    def split_train_test_dataset(self, dataset_dir_path: Path):
+    def create_train_test_dataset(self, dataset_dir_path: Path, filedataset_based=True):
         # Copy dataset channels to their respective file
         dataset_dir_path.mkdir(parents=True, exist_ok=True)
 
@@ -50,16 +50,24 @@ class Parse:
         train_df, test_df = np.array_split(
             df, (fractions[:-1].cumsum() * len(df)).astype(int))
 
-        # Save df to file to make it easy to visualize/debug. Test df is used as it is smaller and more portable
-        test_df.to_csv("test.csv")
+        if filedataset_based:
+            self.create_train_test_filedataset(dataset_dir_path, train_df, test_df)
+        else:
+            self.create_train_test_csv(dataset_dir_path, train_df, test_df)
 
-        feature_columns = gh.get_feature_columns(df)
+    def create_train_test_filedataset(self, dataset_dir_path, train_df, test_df):
+        feature_columns = gh.get_feature_columns(train_df)
         self.logger.log(f"Number of feature columns: {len(feature_columns)}")
 
-        train_dataset = gh.df_to_multi_feature_dataset(train_df, feature_columns)
-        test_dataset = gh.df_to_multi_feature_dataset(test_df, feature_columns)
+        train_dataset = gh.df_to_multivariate_target_dataset(train_df, feature_columns)
+        test_dataset = gh.df_to_multivariate_target_dataset(test_df, feature_columns)
 
         datasets = gh.build_train_datasets(train_df, train_dataset, test_df, test_dataset, feature_columns)
 
         datasets.save(str(dataset_dir_path))
+        self.logger.log(f"Parsed train and test datasets can be found in [{dataset_dir_path}]", 'debug')
+
+    def create_train_test_csv(self, dataset_dir_path, train_df, test_df):
+        train_df.to_csv(dataset_dir_path / config.TRAIN_CSV_FILENAME)
+        test_df.to_csv(dataset_dir_path / config.TEST_CSV_FILENAME)
         self.logger.log(f"Parsed train and test datasets can be found in [{dataset_dir_path}]", 'debug')

@@ -10,9 +10,9 @@ SM_ROLE = 'arn:aws:iam::941048668662:role/service-role/AmazonSageMaker-Execution
 METADATA_DATASET_FILENAME = "metadata/metadata.json"
 TRAIN_DATASET_FILENAME = "train/data.json"
 TEST_DATASET_FILENAME = "test/data.json"
+TRAIN_CSV_FILENAME = "train/data.csv"
+TEST_CSV_FILENAME = "test/data.csv"
 
-# TRAIN_DATASET_FILENAME = "train.csv"
-# TEST_DATASET_FILENAME = "test.csv"
 DATASET_FREQ = "1min"
 
 FREQTRADE_USER_DATA_DIR = Path("freqtrade") / "user_data"
@@ -36,8 +36,8 @@ _PROD_HYPER_PARAMETERS = {
 
     'num_layers': 8,
     'num_cells': 200,
-    'dropout_rate': 0.0528,
-    'learning_rate': 0.003
+    'dropout_rate': 0.1525,
+    'learning_rate': 0.001
 }
 
 # Use these hyper parameters when developing, testing new features, and tuning. The model will be less accurate, but
