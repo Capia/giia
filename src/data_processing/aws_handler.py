@@ -3,6 +3,8 @@ from pathlib import Path
 import boto3
 import sagemaker
 import tarfile
+
+from utils import config
 from utils.logger_util import LoggerUtil
 
 
@@ -44,12 +46,18 @@ class AWSHandler:
             self.s3_bucket_resource.put_object(Key=path, Body=data)
             self.logger.log(f"Uploaded {dataset_channel_file} to {self.s3_dataset_dir_uri}")
 
-    def upload_train_datasets(self, dataset_dir_path: Path, override=True):
-        train_dataset_files = [
-            "metadata/metadata.json",
-            "train/data.json",
-            "test/data.json"
-        ]
+    def upload_train_datasets(self, dataset_dir_path: Path, override=True, filedataset_based=True):
+        if filedataset_based:
+            train_dataset_files = [
+                config.METADATA_DATASET_FILENAME,
+                config.TRAIN_DATASET_FILENAME,
+                config.TEST_DATASET_FILENAME
+            ]
+        else:
+            train_dataset_files = [
+                config.TRAIN_CSV_FILENAME,
+                config.TEST_CSV_FILENAME
+            ]
 
         for file in train_dataset_files:
             self.upload_to_sagemaker_s3_bucket(dataset_dir_path, file, override)

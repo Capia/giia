@@ -1,6 +1,7 @@
 import boto3
 import sagemaker
 from sagemaker.estimator import EstimatorBase
+from sagemaker.parameter import CategoricalParameter
 from sagemaker.tuner import HyperparameterTuner, ContinuousParameter, IntegerParameter
 import pandas as pd
 
@@ -88,10 +89,15 @@ class Tune:
 
     def _get_manual_hyperparameters(self):
         return {
-            'num_layers': IntegerParameter(4, 10),
-            'num_cells': IntegerParameter(60, 120),
-            'dropout_rate': ContinuousParameter(0.05, 0.20),
-            'learning_rate': ContinuousParameter(0.0005, 0.01)
+            'skip_size': CategoricalParameter([6, 9, 12, 15, 18]),
+            'ar_window': CategoricalParameter([6, 9, 12, 15, 18]),
+            'channels': CategoricalParameter([60, 90, 120, 150, 180]),
+            'rnn_num_layers': CategoricalParameter([60, 90, 120, 150, 180]),
+            'skip_rnn_num_layers': CategoricalParameter([6, 9, 12, 15, 18]),
+            'kernel_size': CategoricalParameter([6, 9, 12, 15, 18]),
+
+            # 'dropout_rate': ContinuousParameter(0.05, 0.20),
+            # 'learning_rate': ContinuousParameter(0.0005, 0.01)
         }
 
     def _get_range_for_hyperparameter(self, hp_key, hp_range=None, hp_allowed_min=None, hp_allowed_max=None):

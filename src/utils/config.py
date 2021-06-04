@@ -2,7 +2,7 @@
 from pathlib import Path
 
 MODEL_NAME = "giia"
-MODEL_VERSION = "0.6.2"
+MODEL_VERSION = "0.7.6"
 MODEL_ID = f"{MODEL_NAME}-{MODEL_VERSION}"
 
 SM_ROLE = 'arn:aws:iam::941048668662:role/service-role/AmazonSageMaker-ExecutionRole-20191206T145896'
@@ -36,6 +36,14 @@ _PROD_HYPER_PARAMETERS = {
 
     'num_layers': 8,
     'num_cells': 200,
+
+    'skip_size': 18,
+    'ar_window': 18,
+    'channels': 180,
+    'rnn_num_layers': 180,
+    'skip_rnn_num_layers': 18,
+    'kernel_size': 18,
+
     'dropout_rate': 0.1525,
     'learning_rate': 0.001
 }
@@ -51,6 +59,14 @@ _MODERATE_HYPER_PARAMETERS = {
     'context_length': 60,
     'num_layers': 3,
     'num_cells': 65,
+
+    'skip_size': 4,
+    'ar_window': 8,
+    'channels': 40,
+    'rnn_num_layers': 40,
+    'skip_rnn_num_layers': 4,
+    'kernel_size': 4,
+
     'dropout_rate': 0.1525,
     'learning_rate': 0.001
 }
@@ -61,10 +77,19 @@ _SIMPLE_HYPER_PARAMETERS = {
     'epochs': 1,
     'batch_size': 16,
     'num_batches_per_epoch': 10,
-    'prediction_length': 12,
-    'context_length': 12 * 2,
+    'prediction_length': 5,
+    'context_length': 60,
+
     'num_layers': 1,
     'num_cells': 20,
+
+    'skip_size': 2,
+    'ar_window': 4,
+    'channels': 20,
+    'rnn_num_layers': 20,
+    'skip_rnn_num_layers': 2,
+    'kernel_size': 2,
+
     'dropout_rate': 0.01,
     'learning_rate': 0.001
 }

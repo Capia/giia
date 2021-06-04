@@ -27,7 +27,7 @@ class Train:
             instance_type=instance_type,
             instance_count=1,
             framework_version='1.8.0',  # Should be the same mxnet X.X.X version found in requirements.txt
-            py_version='py3',
+            py_version='py37',
             sagemaker_session=sagemaker_session,
             enable_sagemaker_metrics=True,
             metric_definitions=self._get_metric_definitions(),
@@ -52,8 +52,14 @@ class Train:
             'batch_size': config.HYPER_PARAMETERS['batch_size'],
             'context_length': config.HYPER_PARAMETERS['context_length'],
             'prediction_length': config.HYPER_PARAMETERS['prediction_length'],
-            'num_layers': config.HYPER_PARAMETERS['num_layers'],
-            'num_cells': config.HYPER_PARAMETERS['num_cells'],
+
+            'skip_size': config.HYPER_PARAMETERS['skip_size'],
+            'ar_window': config.HYPER_PARAMETERS['ar_window'],
+            'channels': config.HYPER_PARAMETERS['channels'],
+            'rnn_num_layers': config.HYPER_PARAMETERS['rnn_num_layers'],
+            'skip_rnn_num_layers': config.HYPER_PARAMETERS['skip_rnn_num_layers'],
+            'kernel_size': config.HYPER_PARAMETERS['kernel_size'],
+
             'dropout_rate': config.HYPER_PARAMETERS['dropout_rate'],
             'learning_rate': config.HYPER_PARAMETERS['learning_rate'],
         }

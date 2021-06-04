@@ -65,18 +65,13 @@ def train(model_args):
         prediction_length=model_args.prediction_length,
         num_series=num_series,
 
-        skip_size=9,
-        ar_window=18,
-        channels=90,
-        rnn_num_layers=90,
-        skip_rnn_num_layers=9,
+        skip_size=model_args.skip_size,
+        ar_window=model_args.ar_window,
+        channels=model_args.channels,
+        rnn_num_layers=model_args.rnn_num_layers,
+        skip_rnn_num_layers=model_args.skip_rnn_num_layers,
+        kernel_size=model_args.kernel_size,
 
-        kernel_size=9,
-        # skip_size=4,
-        # ar_window=8,
-        # channels=40,
-        # rnn_num_layers=40,
-        # skip_rnn_num_layers=4,
         output_activation="sigmoid",
 
         trainer=Trainer(
@@ -242,8 +237,14 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=config.HYPER_PARAMETERS["batch_size"])
     parser.add_argument('--prediction_length', type=int, default=config.HYPER_PARAMETERS["prediction_length"])
     parser.add_argument('--context_length', type=int, default=config.HYPER_PARAMETERS["context_length"])
-    parser.add_argument('--num_layers', type=int, default=config.HYPER_PARAMETERS["num_layers"])
-    parser.add_argument('--num_cells', type=int, default=config.HYPER_PARAMETERS["num_cells"])
+
+    parser.add_argument('--skip_size', type=int, default=config.HYPER_PARAMETERS["skip_size"])
+    parser.add_argument('--ar_window', type=int, default=config.HYPER_PARAMETERS["ar_window"])
+    parser.add_argument('--channels', type=int, default=config.HYPER_PARAMETERS["channels"])
+    parser.add_argument('--rnn_num_layers', type=int, default=config.HYPER_PARAMETERS["rnn_num_layers"])
+    parser.add_argument('--skip_rnn_num_layers', type=int, default=config.HYPER_PARAMETERS["skip_rnn_num_layers"])
+    parser.add_argument('--kernel_size', type=int, default=config.HYPER_PARAMETERS["kernel_size"])
+
     parser.add_argument('--dropout_rate', type=float, default=config.HYPER_PARAMETERS["dropout_rate"])
     parser.add_argument('--learning_rate', type=float, default=config.HYPER_PARAMETERS["learning_rate"])
     parser.add_argument('--num_batches_per_epoch', type=float,
