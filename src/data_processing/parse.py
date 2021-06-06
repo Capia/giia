@@ -56,7 +56,7 @@ class Parse:
             self.create_train_test_csv(dataset_dir_path, train_df, test_df)
 
     def create_train_test_filedataset(self, dataset_dir_path, train_df, test_df):
-        feature_columns = gh.get_feature_columns(train_df)
+        feature_columns = gh.get_feature_columns(train_df, exclude_close=False)
         self.logger.log(f"Number of feature columns: {len(feature_columns)}")
 
         train_dataset = gh.df_to_multivariate_target_dataset(train_df, feature_columns)

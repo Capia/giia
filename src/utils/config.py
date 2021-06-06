@@ -10,8 +10,8 @@ SM_ROLE = 'arn:aws:iam::941048668662:role/service-role/AmazonSageMaker-Execution
 METADATA_DATASET_FILENAME = "metadata/metadata.json"
 TRAIN_DATASET_FILENAME = "train/data.json"
 TEST_DATASET_FILENAME = "test/data.json"
-TRAIN_CSV_FILENAME = "train/data.csv"
-TEST_CSV_FILENAME = "test/data.csv"
+TRAIN_CSV_FILENAME = "train.csv"
+TEST_CSV_FILENAME = "test.csv"
 
 DATASET_FREQ = "1min"
 
@@ -53,7 +53,7 @@ _PROD_HYPER_PARAMETERS = {
 # wait time
 _MODERATE_HYPER_PARAMETERS = {
     'epochs': 2,
-    'batch_size': 32,
+    'batch_size': 64,
     'num_batches_per_epoch': 100,
     'prediction_length': 5,
     'context_length': 60,
