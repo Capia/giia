@@ -42,6 +42,7 @@ def df_to_multivariate_target_dataset(df, feature_columns, freq=config.DATASET_F
             {
                 FieldName.START: df.index[0],
                 FieldName.TARGET: [df[column_name][:].values for column_name in feature_columns],
+                FieldName.ITEM_ID: "ETH/USD",
             }
         ],
         freq=freq,
@@ -61,7 +62,8 @@ def build_train_datasets(train_df, train_dataset, test_df, test_dataset, feature
                 # be calculated later with an iterator
                 CategoricalFeatureInfo(name="ts_train_length", cardinality=len(train_df)),
                 CategoricalFeatureInfo(name="ts_test_length", cardinality=len(test_df)),
-            ],
+
+            ] + [CategoricalFeatureInfo(name=f"feature_column_{idx}", cardinality=feature_column) for idx, feature_column in enumerate(feature_columns)],
 
             # Purposely leave out prediction_length as it will couple the hyper parameter to the dataset
         ),

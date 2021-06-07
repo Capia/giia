@@ -18,6 +18,8 @@ def marshal_candle_metadata(df: DataFrame, drop_date_column=False) -> DataFrame:
     # This should be first as all subsequent feature engineering should be based on the round number
     # df = df.round(2)
 
+    df['log_return_close'] = np.log(df['close']).diff()
+
     # These features are easier to manipulate with an integer index, so we add them before setting the time-series index
     df = add_technical_indicator_features(df)
     # Some of the indicators have a warm up period where the first n values are NaN. These need to be removed. The
