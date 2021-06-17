@@ -42,33 +42,33 @@ class DeepProbabilisticStrategy(IStrategy):
     # Buy hyperspace params:
     buy_params = {
         "buy_pred_close_diff_1": 3,  # value loaded from strategy
-        "buy_pred_close_diff_2": 0,  # value loaded from strategy
-        "buy_pred_close_diff_3": 4,  # value loaded from strategy
+        "buy_pred_close_diff_2": 3,  # value loaded from strategy
+        "buy_pred_close_diff_3": 1,  # value loaded from strategy
     }
 
     # Sell hyperspace params:
     sell_params = {
-        "sell_pred_close_diff_1": -5,  # value loaded from strategy
-        "sell_pred_close_diff_2": -2,  # value loaded from strategy
-        "sell_pred_close_diff_3": 1,  # value loaded from strategy
+        "sell_pred_close_diff_1": -3,  # value loaded from strategy
+        "sell_pred_close_diff_2": 0,  # value loaded from strategy
+        "sell_pred_close_diff_3": 0,  # value loaded from strategy
     }
 
     # ROI table:
     minimal_roi = {
-        "0": 0.087,
-        "8": 0.015,
-        "20": 0.011,
-        "43": 0
+        "0": 0.059,
+        "4": 0.026,
+        "14": 0.013,
+        "25": 0
     }
 
     # Stoploss:
-    stoploss = -0.31
+    stoploss = -0.021
 
     # Trailing stop:
     trailing_stop = True
-    trailing_stop_positive = 0.117
-    trailing_stop_positive_offset = 0.121
-    trailing_only_offset_is_reached = True
+    trailing_stop_positive = 0.173
+    trailing_stop_positive_offset = 0.218
+    trailing_only_offset_is_reached = False
 
     # Define the hyperopt parameter spaces, defaults are overwritten by buy_params and sell_params above
     buy_pred_close_diff_1 = IntParameter(0, 6, default=1)
@@ -205,18 +205,24 @@ class DeepProbabilisticStrategy(IStrategy):
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         is_backtest_mode = len(dataframe) > config.FREQTRADE_MAX_CONTEXT
 
-        if metadata.get('return_cached_dataframe', False):
+        if self.config.get('return_cached_dataframe', False):
             print(f"Returning cache dataframe from [{config.CACHED_PRED_CSV}]")
-            dataframe = pd.read_csv(filepath_or_buffer=config.CACHED_PRED_CSV, header=0, index_col=0,
-                                    parse_dates=['date.1'])
-            dataframe.rename(columns={'date.1': 'date'}, inplace=True)
-            return dataframe
+            cached_dataframe = pd.read_csv(filepath_or_buffer=config.CACHED_PRED_CSV, header=0, index_col=0,
+                                           parse_dates=['date.1'])
 
-        if metadata.get('marshal_candle_metadata', True):
+            first_index = str(dataframe['date'].iloc[0])
+            last_index = str(dataframe['date'].iloc[-1])
+            print(f"First index of provided df is [{first_index}], the last index is [{last_index}]")
+            cached_dataframe = cached_dataframe[first_index:last_index]
+
+            cached_dataframe.rename(columns={'date.1': 'date'}, inplace=True)
+            return cached_dataframe
+
+        if self.config.get('marshal_candle_metadata', True):
             print("Running [marshal_candle_metadata]")
             dataframe = mf.marshal_candle_metadata(dataframe)
 
-        if metadata.get('run_inference', True):
+        if self.config.get('run_inference', True):
             print("Running [run_inference]")
             dataframe = self.run_inference(dataframe, is_backtest_mode)
             dataframe = self.calc_pred_close_weighted(dataframe)
@@ -226,16 +232,18 @@ class DeepProbabilisticStrategy(IStrategy):
         return dataframe
 
     def populate_buy_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        pred_close_diff_1 = self.buy_pred_close_diff_1.value
-        print(f"buy_pred_close_diff_1 is set to [{pred_close_diff_1}]")
-
-        if metadata.get('run_inference', True):
+        if self.config.get('run_inference', True):
             print("Running [populate_buy_trend] with predictions")
+            pred_close_diffs = \
+                [self.buy_pred_close_diff_1.value, self.buy_pred_close_diff_2.value, self.buy_pred_close_diff_3.value]
+            for idx, pred_close_diff in enumerate(pred_close_diffs):
+                print(f"buy_pred_close_diff_{idx + 1} is set to [{pred_close_diff}]")
+
             dataframe.loc[
                 (
-                        (dataframe['pred_close_diff_1'] > pred_close_diff_1) &
-                        (dataframe['pred_close_diff_2'] > self.buy_pred_close_diff_2.value) &
-                        (dataframe['pred_close_diff_3'] > self.buy_pred_close_diff_3.value) &
+                        (dataframe['pred_close_diff_1'] > pred_close_diffs[0]) &
+                        (dataframe['pred_close_diff_2'] > pred_close_diffs[1]) &
+                        (dataframe['pred_close_diff_3'] > pred_close_diffs[2]) &
                         (dataframe['volume'] > 0)  # Make sure Volume is not 0
                 ),
                 'buy'] = 1
@@ -251,16 +259,18 @@ class DeepProbabilisticStrategy(IStrategy):
         return dataframe
 
     def populate_sell_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        pred_close_diff_1 = self.sell_pred_close_diff_1.value
-        print(f"sell_pred_close_diff_1 is set to [{pred_close_diff_1}]")
-
-        if metadata.get('run_inference', True):
+        if self.config.get('run_inference', True):
             print("Running [populate_sell_trend] with predictions")
+            pred_close_diffs = \
+                [self.sell_pred_close_diff_1.value, self.sell_pred_close_diff_2.value, self.sell_pred_close_diff_3.value]
+            for idx, pred_close_diff in enumerate(pred_close_diffs):
+                print(f"sell_pred_close_diff_{idx + 1} is set to [{pred_close_diff}]")
+
             dataframe.loc[
                 (
-                        (dataframe['pred_close_diff_1'] < pred_close_diff_1) &
-                        (dataframe['pred_close_diff_2'] < self.sell_pred_close_diff_2.value) &
-                        (dataframe['pred_close_diff_3'] < self.sell_pred_close_diff_3.value) &
+                        (dataframe['pred_close_diff_1'] < pred_close_diffs[0]) &
+                        (dataframe['pred_close_diff_2'] < pred_close_diffs[1]) &
+                        (dataframe['pred_close_diff_3'] < pred_close_diffs[2]) &
                         (dataframe['volume'] > 0)  # Make sure Volume is not 0
                 ),
                 'sell'] = 1
