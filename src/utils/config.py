@@ -12,6 +12,7 @@ TRAIN_DATASET_FILENAME = "train/data.json"
 TEST_DATASET_FILENAME = "test/data.json"
 TRAIN_CSV_FILENAME = "train.csv"
 TEST_CSV_FILENAME = "test.csv"
+CACHED_PRED_CSV = "../out/pred_cache.csv"
 
 DATASET_FREQ = "1min"
 

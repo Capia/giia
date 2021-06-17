@@ -206,9 +206,8 @@ class DeepProbabilisticStrategy(IStrategy):
         is_backtest_mode = len(dataframe) > config.FREQTRADE_MAX_CONTEXT
 
         if metadata.get('return_cached_dataframe', False):
-            cache_dataframe_path = "../out/pred_cache.csv"
-            print(f"Returning cache dataframe from [{cache_dataframe_path}]")
-            dataframe = pd.read_csv(filepath_or_buffer=cache_dataframe_path, header=0, index_col=0,
+            print(f"Returning cache dataframe from [{config.CACHED_PRED_CSV}]")
+            dataframe = pd.read_csv(filepath_or_buffer=config.CACHED_PRED_CSV, header=0, index_col=0,
                                     parse_dates=['date.1'])
             dataframe.rename(columns={'date.1': 'date'}, inplace=True)
             return dataframe

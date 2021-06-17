@@ -17,7 +17,7 @@ class Parse:
         self.logger = logger
 
     def create_train_test_dataset(self, dataset_dir_path: Path, filedataset_based=True, one_dim_target=True,
-                                  truncate_date=None):
+                                  starting_date_truncate=None):
         # Copy dataset channels to their respective file
         dataset_dir_path.mkdir(parents=True, exist_ok=True)
 
@@ -36,8 +36,8 @@ class Parse:
                              f"downloaded to [{data_dir}]")
 
         df = mf.marshal_candle_metadata(candles, drop_date_column=True)
-        if truncate_date:
-            df = df[truncate_date:]
+        if starting_date_truncate:
+            df = df[starting_date_truncate:]
 
         self.logger.log("First sample:")
         self.logger.log(df.head(1), newline=True)
@@ -52,6 +52,8 @@ class Parse:
         # Split dataset between training and testing
         train_df, test_df = np.array_split(
             df, (fractions[:-1].cumsum() * len(df)).astype(int))
+        self.logger.log(f"Train dataset starts at: {train_df.iloc[0]}")
+        self.logger.log(f"Test dataset starts at: {test_df.iloc[0]}")
 
         if filedataset_based:
             self.create_train_test_filedataset(dataset_dir_path, train_df, test_df, one_dim_target)
