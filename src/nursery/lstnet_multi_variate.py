@@ -73,7 +73,9 @@ def train(model_args):
         ar_window=model_args.ar_window,
         channels=model_args.channels,
         rnn_num_layers=model_args.rnn_num_layers,
+        # rnn_cell_type="lstm",
         skip_rnn_num_layers=model_args.skip_rnn_num_layers,
+        # skip_rnn_cell_type="lstm",
         kernel_size=model_args.kernel_size,
 
         output_activation="sigmoid",
@@ -89,7 +91,8 @@ def train(model_args):
 
     # Train the model
     predictor = estimator.train(
-        training_data=datasets.train
+        training_data=datasets.train,
+        validation_data=datasets.test
     )
 
     net_name = type(predictor.prediction_net).__name__
@@ -107,6 +110,8 @@ def train(model_args):
         num_samples=100,  # number of samples used in probabilistic evaluation
     )
 
+    _print_metrics(agg_metrics, item_metrics, datasets.metadata)
+
     # Save the model
     predictor.serialize(Path(model_args.model_dir))
 
@@ -122,6 +127,26 @@ def _get_ctx():
         ctx = mxnet.cpu()
         print("Using CPU context")
     return ctx
+
+
+def _print_metrics(agg_metrics, item_metrics, metadata):
+    for key in list(agg_metrics.keys()):
+        if key[0].isdigit():
+            del agg_metrics[key]
+    print("Aggregated performance")
+    print(json.dumps(agg_metrics, indent=4))
+
+    feature_columns_map = {}
+    for feat in metadata.feat_static_cat:
+        if feat.name.startswith("feature_column_"):
+            feature_index = int(feat.name.split("_")[2])
+            feature_columns_map[feature_index] = feat.cardinality
+    feature_columns = [feature_columns_map.get(ele, 0) for ele in range(len(feature_columns_map))]
+
+    close_index = feature_columns.index("close")
+    # close_index = feature_columns.index("log_return_close")
+    print("'close' performance")
+    print(item_metrics.iloc[close_index])
 
 
 # Used for inference. Once the model is trained, we can deploy it and this function will load the trained model. No-op

@@ -3,6 +3,7 @@
 # --- Do not remove these libs ---
 import numpy as np  # noqa
 import pandas as pd  # noqa
+from freqtrade.strategy import IntParameter
 from pandas import DataFrame
 
 from freqtrade.strategy.interface import IStrategy
@@ -17,28 +18,6 @@ from utils import config
 
 class DeepProbabilisticStrategy(IStrategy):
     INTERFACE_VERSION = 2
-
-    # Minimal ROI designed for the strategy.
-    # This attribute will be overridden if the config file contains "minimal_roi".
-    # minimal_roi = {
-    #     "60": 0.01,
-    #     "30": 0.02,
-    #     "0": 0.04
-    # }
-    minimal_roi = {
-        # "180": 0.01,
-        "60": 0.01,
-        "10": 0.02,
-        "5": 0.03,
-        "0": 0.05
-    }
-
-    # Trailing stoploss
-    stoploss = -0.02
-    trailing_stop = True
-    trailing_stop_positive = 0.02
-    trailing_stop_positive_offset = 0.03
-    trailing_only_offset_is_reached = True
 
     # Run "populate_indicators()" only for new candle.
     process_only_new_candles = False
@@ -59,6 +38,45 @@ class DeepProbabilisticStrategy(IStrategy):
         'buy': 'gtc',
         'sell': 'gtc'
     }
+
+    # Buy hyperspace params:
+    buy_params = {
+        "buy_pred_close_diff_1": 3,  # value loaded from strategy
+        "buy_pred_close_diff_2": 0,  # value loaded from strategy
+        "buy_pred_close_diff_3": 4,  # value loaded from strategy
+    }
+
+    # Sell hyperspace params:
+    sell_params = {
+        "sell_pred_close_diff_1": -5,  # value loaded from strategy
+        "sell_pred_close_diff_2": -2,  # value loaded from strategy
+        "sell_pred_close_diff_3": 1,  # value loaded from strategy
+    }
+
+    # ROI table:
+    minimal_roi = {
+        "0": 0.087,
+        "8": 0.015,
+        "20": 0.011,
+        "43": 0
+    }
+
+    # Stoploss:
+    stoploss = -0.31
+
+    # Trailing stop:
+    trailing_stop = True
+    trailing_stop_positive = 0.117
+    trailing_stop_positive_offset = 0.121
+    trailing_only_offset_is_reached = True
+
+    # Define the hyperopt parameter spaces, defaults are overwritten by buy_params and sell_params above
+    buy_pred_close_diff_1 = IntParameter(0, 6, default=1)
+    buy_pred_close_diff_2 = IntParameter(0, 6, default=1)
+    buy_pred_close_diff_3 = IntParameter(0, 6, default=1)
+    sell_pred_close_diff_1 = IntParameter(-5, 1, default=-4)
+    sell_pred_close_diff_2 = IntParameter(-5, 1, default=-4)
+    sell_pred_close_diff_3 = IntParameter(-5, 1, default=-4)
 
     def informative_pairs(self):
         return []
@@ -120,11 +138,11 @@ class DeepProbabilisticStrategy(IStrategy):
             print('Running in dry/live mode')
             get_predictions(df)
 
-        df = self.calc_pred_close_weighted(df)
-        df = self.calc_percent_diff(df)
         return df
 
     def calc_pred_close_weighted(self, df: DataFrame) -> DataFrame:
+        print("Calculating weighted close from predictions")
+
         # We take a weighted average of all close price predictions for the next time frame (t+1). Given current time
         # t0, we find the weighted average of the next expected close price (close of t+1) by valuing t0's t+1
         # prediction more than t-1's t+2 prediction. This continues until t-4's t+5 prediction, which is weighted the
@@ -132,6 +150,7 @@ class DeepProbabilisticStrategy(IStrategy):
         # predictions further out. Thus it stands to reason they are least likely to remain accurate and while the
         # information still may be valuable, it should not be considered as strongly as more current predictions.
         weights = [1, 0.8, 0.6, 0.4, 0.2]
+        # weights = [1, 0.4, 0.3, 0.2, 0.1]
 
         df["pred_close_weighted_1"] = \
             (
@@ -169,6 +188,8 @@ class DeepProbabilisticStrategy(IStrategy):
         return df
 
     def calc_percent_diff(self, df: DataFrame) -> DataFrame:
+        print("Calculating percent difference")
+
         df["pred_close_diff_1"] = (
                 (df["pred_close_weighted_1"] - df["close"]) / df["pred_close_weighted_1"] * 100
         )
@@ -184,6 +205,14 @@ class DeepProbabilisticStrategy(IStrategy):
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         is_backtest_mode = len(dataframe) > config.FREQTRADE_MAX_CONTEXT
 
+        if metadata.get('return_cached_dataframe', False):
+            cache_dataframe_path = "../out/pred_cache.csv"
+            print(f"Returning cache dataframe from [{cache_dataframe_path}]")
+            dataframe = pd.read_csv(filepath_or_buffer=cache_dataframe_path, header=0, index_col=0,
+                                    parse_dates=['date.1'])
+            dataframe.rename(columns={'date.1': 'date'}, inplace=True)
+            return dataframe
+
         if metadata.get('marshal_candle_metadata', True):
             print("Running [marshal_candle_metadata]")
             dataframe = mf.marshal_candle_metadata(dataframe)
@@ -191,22 +220,28 @@ class DeepProbabilisticStrategy(IStrategy):
         if metadata.get('run_inference', True):
             print("Running [run_inference]")
             dataframe = self.run_inference(dataframe, is_backtest_mode)
+            dataframe = self.calc_pred_close_weighted(dataframe)
+            dataframe = self.calc_percent_diff(dataframe)
 
         print("Finished populating indicators")
         return dataframe
 
     def populate_buy_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
+        pred_close_diff_1 = self.buy_pred_close_diff_1.value
+        print(f"buy_pred_close_diff_1 is set to [{pred_close_diff_1}]")
+
         if metadata.get('run_inference', True):
+            print("Running [populate_buy_trend] with predictions")
             dataframe.loc[
                 (
-                        (dataframe['pred_close_diff_1'] > 4) &
-                        (dataframe['pred_close_diff_2'] > 4) &
-                        (dataframe['pred_close_diff_3'] > 4) &
+                        (dataframe['pred_close_diff_1'] > pred_close_diff_1) &
+                        (dataframe['pred_close_diff_2'] > self.buy_pred_close_diff_2.value) &
+                        (dataframe['pred_close_diff_3'] > self.buy_pred_close_diff_3.value) &
                         (dataframe['volume'] > 0)  # Make sure Volume is not 0
                 ),
                 'buy'] = 1
         else:
-            # A basic example of setting the buy signal without the predictions
+            print("Running [populate_buy_trend] without predictions")
             dataframe.loc[
                 (
                         (dataframe['close'] > dataframe['close'].shift()) &
@@ -217,17 +252,21 @@ class DeepProbabilisticStrategy(IStrategy):
         return dataframe
 
     def populate_sell_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
+        pred_close_diff_1 = self.sell_pred_close_diff_1.value
+        print(f"sell_pred_close_diff_1 is set to [{pred_close_diff_1}]")
+
         if metadata.get('run_inference', True):
+            print("Running [populate_sell_trend] with predictions")
             dataframe.loc[
                 (
-                        (dataframe['pred_close_diff_1'] < 2) &
-                        (dataframe['pred_close_diff_2'] < 2) &
-                        (dataframe['pred_close_diff_3'] < 2) &
+                        (dataframe['pred_close_diff_1'] < pred_close_diff_1) &
+                        (dataframe['pred_close_diff_2'] < self.sell_pred_close_diff_2.value) &
+                        (dataframe['pred_close_diff_3'] < self.sell_pred_close_diff_3.value) &
                         (dataframe['volume'] > 0)  # Make sure Volume is not 0
                 ),
                 'sell'] = 1
         else:
-            # A basic example of setting the sell signal without the predictions
+            print("Running [populate_sell_trend] without predictions")
             dataframe.loc[
                 (
                         (dataframe['close'] < dataframe['close'].shift()) &

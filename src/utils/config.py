@@ -37,12 +37,12 @@ _PROD_HYPER_PARAMETERS = {
     'num_layers': 8,
     'num_cells': 200,
 
-    'skip_size': 18,
-    'ar_window': 18,
-    'channels': 180,
-    'rnn_num_layers': 180,
-    'skip_rnn_num_layers': 18,
-    'kernel_size': 18,
+    'skip_size': 32,
+    'ar_window': 32,
+    'channels': 128,
+    'rnn_num_layers': 128,
+    'skip_rnn_num_layers': 4,
+    'kernel_size': 6,
 
     'dropout_rate': 0.1525,
     'learning_rate': 0.001
@@ -52,13 +52,14 @@ _PROD_HYPER_PARAMETERS = {
 # these HPs can be used to get a general idea of how well the model may perform with PROD HPs, without the longer
 # wait time
 _MODERATE_HYPER_PARAMETERS = {
-    'epochs': 2,
+    'epochs': 100,
     'batch_size': 64,
     'num_batches_per_epoch': 100,
     'prediction_length': 5,
-    'context_length': 60,
-    'num_layers': 3,
-    'num_cells': 65,
+    'context_length': 5,
+
+    'num_layers': 6,
+    'num_cells': 160,
 
     'skip_size': 4,
     'ar_window': 8,

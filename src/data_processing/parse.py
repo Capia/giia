@@ -16,7 +16,8 @@ class Parse:
     def __init__(self, logger: LoggerUtil):
         self.logger = logger
 
-    def create_train_test_dataset(self, dataset_dir_path: Path, filedataset_based=True):
+    def create_train_test_dataset(self, dataset_dir_path: Path, filedataset_based=True, one_dim_target=True,
+                                  truncate_date=None):
         # Copy dataset channels to their respective file
         dataset_dir_path.mkdir(parents=True, exist_ok=True)
 
@@ -35,6 +36,8 @@ class Parse:
                              f"downloaded to [{data_dir}]")
 
         df = mf.marshal_candle_metadata(candles, drop_date_column=True)
+        if truncate_date:
+            df = df[truncate_date:]
 
         self.logger.log("First sample:")
         self.logger.log(df.head(1), newline=True)
@@ -51,16 +54,25 @@ class Parse:
             df, (fractions[:-1].cumsum() * len(df)).astype(int))
 
         if filedataset_based:
-            self.create_train_test_filedataset(dataset_dir_path, train_df, test_df)
+            self.create_train_test_filedataset(dataset_dir_path, train_df, test_df, one_dim_target)
         else:
             self.create_train_test_csv(dataset_dir_path, train_df, test_df)
 
-    def create_train_test_filedataset(self, dataset_dir_path, train_df, test_df):
-        feature_columns = gh.get_feature_columns(train_df, exclude_close=False)
-        self.logger.log(f"Number of feature columns: {len(feature_columns)}")
+    def create_train_test_filedataset(self, dataset_dir_path, train_df, test_df, one_dim_target):
+        if one_dim_target:
+            self.logger.log("Building a univariate FileDataset")
 
-        train_dataset = gh.df_to_multivariate_target_dataset(train_df, feature_columns)
-        test_dataset = gh.df_to_multivariate_target_dataset(test_df, feature_columns)
+            feature_columns = []
+            train_dataset = gh.df_to_univariate_dataset(train_df)
+            test_dataset = gh.df_to_univariate_dataset(test_df)
+        else:
+            self.logger.log("Building a multivariate FileDataset")
+
+            feature_columns = gh.get_feature_columns(train_df, exclude_close=False)
+            self.logger.log(f"Number of feature columns: {len(feature_columns)}")
+
+            train_dataset = gh.df_to_multivariate_target_dataset(train_df, feature_columns)
+            test_dataset = gh.df_to_multivariate_target_dataset(test_df, feature_columns)
 
         datasets = gh.build_train_datasets(train_df, train_dataset, test_df, test_dataset, feature_columns)
 

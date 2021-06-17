@@ -24,6 +24,7 @@ src/freqtrade/user_data/data/
 src/freqtrade/user_data/logs/
 src/freqtrade/user_data/notebooks/.ipynb_checkpoints/
 src/freqtrade/user_data/backtest_results/
+src/freqtrade/user_data/hyperopt_results/
 
 # Other
 .DS_Store

@@ -36,6 +36,19 @@ def df_to_multi_feature_dataset(df, feature_columns, freq=config.DATASET_FREQ):
     )
 
 
+def df_to_univariate_dataset(df, freq=config.DATASET_FREQ):
+    return ListDataset(
+        [
+            {
+                FieldName.START: df.index[0],
+                FieldName.TARGET: df["close"][:].values,
+                FieldName.ITEM_ID: "close"
+            }
+        ],
+        freq=freq
+    )
+
+
 def df_to_multivariate_target_dataset(df, feature_columns, freq=config.DATASET_FREQ):
     return ListDataset(
         [

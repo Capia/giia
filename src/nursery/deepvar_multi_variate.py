@@ -15,17 +15,21 @@ import numpy as np
 from typing import List, Tuple, Union
 from pathlib import Path
 
+from gluonts.dataset.common import load_datasets
 from gluonts.dataset.stat import calculate_dataset_statistics
 from gluonts.evaluation.backtest import backtest_metrics, make_evaluation_predictions
 from gluonts.evaluation import MultivariateEvaluator
 from gluonts.model.deepvar import DeepVAREstimator
+from gluonts.model.lstnet import LSTNetEstimator
 from gluonts.model.predictor import Predictor
 from gluonts.model.forecast import Config, Forecast
+from gluonts.mx.distribution import NegativeBinomialOutput, MultivariateGaussianOutput, DirichletMultinomialOutput, \
+    DirichletOutput
+from gluonts.mx.distribution.lowrank_gp import LowrankGPOutput
 from gluonts.mx.trainer import Trainer
 from mxnet.runtime import feature_list
 
 from utils import config
-import data_processing.gluonts_helper as gh
 
 
 # Creates a training and testing ListDataset, a DeepAR estimator, and performs the training. It also performs
@@ -34,24 +38,28 @@ def train(model_args):
     _describe_model(model_args)
 
     dataset_dir_path = Path(model_args.dataset_dir)
-    train_dataset_path = dataset_dir_path / config.TRAIN_CSV_FILENAME
-    test_dataset_filename = dataset_dir_path / config.TEST_CSV_FILENAME
+    print("Dataset directory and files:")
+    for path in dataset_dir_path.glob('**/*'):
+        print(path)
 
-    train_df = _get_df_from_dataset_file(train_dataset_path)
-    test_df = _get_df_from_dataset_file(test_dataset_filename)
+    datasets = load_datasets(
+        metadata=(dataset_dir_path / config.METADATA_DATASET_FILENAME).parent,
+        train=(dataset_dir_path / config.TRAIN_DATASET_FILENAME).parent,
+        test=(dataset_dir_path / config.TEST_DATASET_FILENAME).parent,
+        one_dim_target=False,
+        cache=True
+    )
+    print(f"Train dataset stats: {calculate_dataset_statistics(datasets.train)}")
+    print(f"Test dataset stats: {calculate_dataset_statistics(datasets.test)}")
 
-    feature_columns = gh.get_feature_columns(train_df, exclude_close=False)
-    num_series = len(feature_columns)
+    # Get precomputed train length to prevent iterating through a large dataset in memory
+    num_series = int(next(feat.cardinality for feat in datasets.metadata.feat_static_cat if feat.name == "num_series"))
     print(f"num_series = [{num_series}]")
 
-    train_dataset = gh.df_to_multivariate_target_dataset(train_df, feature_columns)
-    test_dataset = gh.df_to_multivariate_target_dataset(test_df, feature_columns)
-
-    print(f"Train dataset stats: {calculate_dataset_statistics(train_dataset)}")
-    print(f"Test dataset stats: {calculate_dataset_statistics(test_dataset)}")
+    train_dataset_length = int(next(feat.cardinality
+                                    for feat in datasets.metadata.feat_static_cat if feat.name == "ts_train_length"))
 
     if not model_args.num_batches_per_epoch:
-        train_dataset_length = len(train_df)
         model_args.num_batches_per_epoch = train_dataset_length // model_args.batch_size
         print(f"Defaulting num_batches_per_epoch to: [{model_args.num_batches_per_epoch}] "
               f"= (length of train dataset [{train_dataset_length}]) / (batch size [{model_args.batch_size}])")
@@ -67,6 +75,14 @@ def train(model_args):
 
         num_layers=model_args.num_layers,
         num_cells=model_args.num_cells,
+        rank=32,
+        # cell_type="gru",
+
+        # distr_output=MultivariateGaussianOutput(dim=num_series),
+        # distr_output=DirichletMultinomialOutput(dim=num_series),
+        # distr_output=LowrankGPOutput(dim=num_series, rank=5),
+        # distr_output=NegativeBinomialOutput(),
+        # distr_output=DirichletOutput(dim=num_series),
 
         trainer=Trainer(
             ctx=ctx,
@@ -79,7 +95,7 @@ def train(model_args):
 
     # Train the model
     predictor = estimator.train(
-        training_data=train_dataset
+        training_data=datasets.train
     )
 
     net_name = type(predictor.prediction_net).__name__
@@ -89,9 +105,11 @@ def train(model_args):
     # Evaluate trained model on test data. This will serialize each of the agg_metrics into a well formatted log.
     # We use this to capture the metrics needed for hyperparameter tuning
     agg_metrics, item_metrics = backtest_metrics(
-        test_dataset=test_dataset,
+        test_dataset=datasets.test,
         predictor=predictor,
-        evaluator=MultivariateEvaluator(quantiles=[0.1, 0.5, 0.9]),
+        evaluator=MultivariateEvaluator(
+            quantiles=[0.1, 0.5, 0.9]
+        ),
         num_samples=100,  # number of samples used in probabilistic evaluation
     )
 
@@ -213,26 +231,16 @@ def _describe_model(model_args):
     print(f"{feature_list()}")
 
 
-def _get_df_from_dataset_file(dataset_path: Path):
-    df = pd.read_csv(filepath_or_buffer=dataset_path, header=0, index_col=0)
-
-    # print(f"First {dataset_path} sample:")
-    # print(df.head(1))
-    # print(f"\nLast {dataset_path} sample:")
-    # print(df.tail(1))
-    # print(df.describe())
-
-    return df
-
-
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--epochs', type=int, default=config.HYPER_PARAMETERS["epochs"])
     parser.add_argument('--batch_size', type=int, default=config.HYPER_PARAMETERS["batch_size"])
     parser.add_argument('--prediction_length', type=int, default=config.HYPER_PARAMETERS["prediction_length"])
     parser.add_argument('--context_length', type=int, default=config.HYPER_PARAMETERS["context_length"])
+
     parser.add_argument('--num_layers', type=int, default=config.HYPER_PARAMETERS["num_layers"])
     parser.add_argument('--num_cells', type=int, default=config.HYPER_PARAMETERS["num_cells"])
+
     parser.add_argument('--dropout_rate', type=float, default=config.HYPER_PARAMETERS["dropout_rate"])
     parser.add_argument('--learning_rate', type=float, default=config.HYPER_PARAMETERS["learning_rate"])
     parser.add_argument('--num_batches_per_epoch', type=float,

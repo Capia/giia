@@ -15,19 +15,20 @@ import numpy as np
 from typing import List, Tuple, Union
 from pathlib import Path
 
+from gluonts.dataset.common import load_datasets
 from gluonts.dataset.stat import calculate_dataset_statistics
-from gluonts.model.deepar import DeepAREstimator
 from gluonts.evaluation.backtest import backtest_metrics, make_evaluation_predictions
 from gluonts.evaluation import Evaluator
+from gluonts.model.deep_factor import DeepFactorEstimator
+from gluonts.model.deepstate import DeepStateEstimator
 from gluonts.model.predictor import Predictor
 from gluonts.model.forecast import Config, Forecast
-from gluonts.dataset.common import load_datasets
-from gluonts.mx.distribution import PoissonOutput, NegativeBinomialOutput, StudentTOutput, LogitNormalOutput, \
-    GaussianOutput, BetaOutput
+from gluonts.mx.distribution import NegativeBinomialOutput
 from gluonts.mx.trainer import Trainer
 from mxnet.runtime import feature_list
 
 from utils import config
+
 
 # Creates a training and testing ListDataset, a DeepAR estimator, and performs the training. It also performs
 # evaluation and prints performance metrics
@@ -35,17 +36,23 @@ def train(model_args):
     _describe_model(model_args)
 
     dataset_dir_path = Path(model_args.dataset_dir)
+    print("Dataset directory and files:")
+    for path in dataset_dir_path.glob('**/*'):
+        print(path)
+
     datasets = load_datasets(
         metadata=(dataset_dir_path / config.METADATA_DATASET_FILENAME).parent,
         train=(dataset_dir_path / config.TRAIN_DATASET_FILENAME).parent,
         test=(dataset_dir_path / config.TEST_DATASET_FILENAME).parent,
         cache=True
     )
-
     print(f"Train dataset stats: {calculate_dataset_statistics(datasets.train)}")
     print(f"Test dataset stats: {calculate_dataset_statistics(datasets.test)}")
 
     # Get precomputed train length to prevent iterating through a large dataset in memory
+    num_series = int(next(feat.cardinality for feat in datasets.metadata.feat_static_cat if feat.name == "num_series"))
+    print(f"num_series = [{num_series}]")
+
     train_dataset_length = int(next(feat.cardinality
                                     for feat in datasets.metadata.feat_static_cat if feat.name == "ts_train_length"))
 
@@ -55,20 +62,25 @@ def train(model_args):
               f"= (length of train dataset [{train_dataset_length}]) / (batch size [{model_args.batch_size}])")
 
     ctx = _get_ctx()
-    distr_output = _get_distr_output()
 
-    estimator = DeepAREstimator(
+    estimator = DeepFactorEstimator(
         freq=config.DATASET_FREQ,
-        # batch_size=model_args.batch_size,
-        context_length=model_args.context_length,
+        batch_size=model_args.batch_size,
         prediction_length=model_args.prediction_length,
-        dropout_rate=model_args.dropout_rate,
-        num_layers=model_args.num_layers,
-        num_cells=model_args.num_cells,
-        distr_output=distr_output,
+        context_length=model_args.context_length,
 
-        # dropoutcell_type='VariationalDropoutCell',
-        # use_feat_dynamic_real=True,
+        # dropout_rate=model_args.dropout_rate,
+        # num_layers=model_args.num_layers,
+        # num_cells=model_args.num_cells,
+
+        num_hidden_global=300,
+        num_layers_global=10,
+        num_factors=100,
+        num_hidden_local=100,
+        num_layers_local=10,
+        cell_type="lstm",
+
+        distr_output=_get_distr_output(),
 
         trainer=Trainer(
             ctx=ctx,
@@ -80,7 +92,14 @@ def train(model_args):
     )
 
     # Train the model
-    predictor = estimator.train(training_data=datasets.train)
+    predictor = estimator.train(
+        training_data=datasets.train,
+        validation_data=datasets.test
+    )
+
+    net_name = type(predictor.prediction_net).__name__
+    num_model_param = estimator.trainer.count_model_params(predictor.prediction_net)
+    print(f"Number of parameters in {net_name}: {num_model_param}")
 
     # Evaluate trained model on test data. This will serialize each of the agg_metrics into a well formatted log.
     # We use this to capture the metrics needed for hyperparameter tuning
@@ -88,15 +107,17 @@ def train(model_args):
         test_dataset=datasets.test,
         predictor=predictor,
         evaluator=Evaluator(
-            quantiles=[0.1, 0.5, 0.9],
-            # seasonality=5
+            quantiles=[0.1, 0.5, 0.9]
         ),
         num_samples=100,  # number of samples used in probabilistic evaluation
     )
 
+    _print_metrics(agg_metrics, item_metrics, datasets.metadata)
+
     # Save the model
     predictor.serialize(Path(model_args.model_dir))
 
+    print("Completed training")
     return predictor
 
 
@@ -111,14 +132,34 @@ def _get_ctx():
 
 
 def _get_distr_output():
-    # distr_output = NegativeBinomialOutput()
+    distr_output = NegativeBinomialOutput()
     # distr_output = PoissonOutput()
     # distr_output = BetaOutput()
     # distr_output = GaussianOutput()
-    distr_output = StudentTOutput()
+    # distr_output = StudentTOutput()
 
     print(f"Using distr_output [{type(distr_output).__name__}]")
     return distr_output
+
+
+def _print_metrics(agg_metrics, item_metrics, metadata):
+    for key in list(agg_metrics.keys()):
+        if key[0].isdigit():
+            del agg_metrics[key]
+    print("Aggregated performance")
+    print(json.dumps(agg_metrics, indent=4))
+
+    # feature_columns_map = {}
+    # for feat in metadata.feat_static_cat:
+    #     if feat.name.startswith("feature_column_"):
+    #         feature_index = int(feat.name.split("_")[2])
+    #         feature_columns_map[feature_index] = feat.cardinality
+    # feature_columns = [feature_columns_map.get(ele, 0) for ele in range(len(feature_columns_map))]
+    #
+    # close_index = feature_columns.index("close")
+    # # close_index = feature_columns.index("log_return_close")
+    # print("'close' performance")
+    # print(item_metrics.iloc[close_index])
 
 
 # Used for inference. Once the model is trained, we can deploy it and this function will load the trained model. No-op
@@ -165,7 +206,7 @@ def _predict_fn(input_df: pd.DataFrame, model: Predictor, num_samples=100) -> Li
     feature_columns = gh.get_feature_columns(input_df)
     print(f"Number of feature columns: {len(feature_columns)}")
 
-    dataset = gh.df_to_multi_feature_dataset(input_df, feature_columns, freq=model.freq)
+    dataset = gh.df_to_multivariate_target_dataset(input_df, feature_columns, freq=model.freq)
     print(f"Dataset stats: {calculate_dataset_statistics(dataset)}")
 
     print(f"Starting prediction...")
@@ -228,8 +269,14 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=config.HYPER_PARAMETERS["batch_size"])
     parser.add_argument('--prediction_length', type=int, default=config.HYPER_PARAMETERS["prediction_length"])
     parser.add_argument('--context_length', type=int, default=config.HYPER_PARAMETERS["context_length"])
-    parser.add_argument('--num_layers', type=int, default=config.HYPER_PARAMETERS["num_layers"])
-    parser.add_argument('--num_cells', type=int, default=config.HYPER_PARAMETERS["num_cells"])
+
+    parser.add_argument('--skip_size', type=int, default=config.HYPER_PARAMETERS["skip_size"])
+    parser.add_argument('--ar_window', type=int, default=config.HYPER_PARAMETERS["ar_window"])
+    parser.add_argument('--channels', type=int, default=config.HYPER_PARAMETERS["channels"])
+    parser.add_argument('--rnn_num_layers', type=int, default=config.HYPER_PARAMETERS["rnn_num_layers"])
+    parser.add_argument('--skip_rnn_num_layers', type=int, default=config.HYPER_PARAMETERS["skip_rnn_num_layers"])
+    parser.add_argument('--kernel_size', type=int, default=config.HYPER_PARAMETERS["kernel_size"])
+
     parser.add_argument('--dropout_rate', type=float, default=config.HYPER_PARAMETERS["dropout_rate"])
     parser.add_argument('--learning_rate', type=float, default=config.HYPER_PARAMETERS["learning_rate"])
     parser.add_argument('--num_batches_per_epoch', type=float,
