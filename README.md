@@ -12,6 +12,21 @@ short-term outlooks for any given cyrpto.
 This encompasses using MXNet + GluonTS to create an AI model based on time series data. This repo leverages AWS 
 SageMaker for its robust API and scalability.
 
+## Model Architecture
+Currently the model is using DeepAR. However, other models listed below should be tested for their effectiveness. 
+LSTNet is likely the most promising.
+
+- **DeepAR** is a supervised learning algorithm for forecasting scalar time series using recurrent neural networks 
+  (RNN)
+- **SFeedFwd** (Simple Feedforward) is a supervised learning algorithm where information moves in only one 
+  direction—forward—from the input nodes, through the hidden nodes (if any) and to the output nodes in the forward 
+  direction
+- **LSTNet** (Long- and Short-term Time-series network) is a multivariate time series forecasting model that uses the 
+  combination of Convolution Neural Network (CNN) and the Recurrent Neural Network (RNN) to find short-term local 
+  dependency patterns among variables and them find long-term patterns for time series trends
+- **Seq2Seq** (Sequence-to-sequence learning) is a method to train models to convert sequences from one domain to 
+  sequences in another domain
+
 ## Getting Started
 First, set up a virtual environment:
 ```
@@ -21,13 +36,9 @@ source venv/bin/activate
 
 Then install the dependencies with:
 ```
+# Note that there are a few dependencies commented out inside the requirements.txt file. You need to install those 
+#  manually
 pip install -r ./src/requirements.txt
-```
-and
-```
-# Install this separately from the requirements file, which the reasoning is explained within it. You will need to have 
-#  the TA-Lib library installed on your machine 
-pip install freqtrade
 ```
 
 Finally, set the jupyter notebook to use the virtual environment:
@@ -57,26 +68,17 @@ you choose, ensure you check it is installed with `nbstripout --status`
 ## Backlog
 ### TODO
 - Rolling time series (unreleased version of gluonts)
-- Download more data
-- Check dtype (float64). All test predictions are a couple of decimal points off
+- Feature time series (multivariate?)
+- Visualize model (tensorboard like)
+- Visualize model's performance (tensorboard like)
 - Calculate model's confidence
   - This can be based of spread of precentiles, RMSE, and other model output.
 - Calculate risk factor feature
   - Here an algorithm can determine the level of risk associated with a trade. Then another algorithm will sort
 and identify the most favorable trades based on risk vs reward.
 
-### Future Implementations
-1) Infrastructure-as-Code with AWS CDK
-2) Set up API gateway
-- Token based
-- Rate limits
-3) Set up DB (likely DynamoDB) to keep track of tokens, user accounts, and how many requests made
-4) UI
-- Hopefully this is based on Flutter and it is Web/Desktop designed
-- Sign in with Apple
-5) Automation
-
 ### Other Ideas for Input Parameters
+- tick vs time based candles https://towardsdatascience.com/advanced-candlesticks-for-machine-learning-i-tick-bars-a8b93728b4c5
 - Google Trends
 - Foreign markets
 - Futures
@@ -103,7 +105,11 @@ https://docs.aws.amazon.com/sagemaker/latest/dg/automatic-model-tuning-how-it-wo
 https://github.com/aws-samples/amazon-sagemaker-time-series-prediction-using-gluonts/blob/master/notebooks/part3/twitter_volume_forecast.ipynb
 https://aws.amazon.com/blogs/machine-learning/creating-neural-time-series-models-with-gluon-time-series/
 https://aws.amazon.com/blogs/industries/novartis-ag-uses-amazon-sagemaker-and-gluonts-for-demand-forecasting/
+https://aws.amazon.com/blogs/machine-learning/training-debugging-and-running-time-series-forecasting-models-with-the-gluonts-toolkit-on-amazon-sagemaker/
+https://docs.aws.amazon.com/sagemaker/latest/dg/deepar_hyperparameters.html
+https://github.com/awslabs/sagemaker-deep-demand-forecast
 https://www.freqtrade.io/en/latest/configuration/
+https://towardsdatascience.com/aws-sagemaker-endpoint-as-rest-service-with-api-gateway-48c36a3cf46c
 
 ### Market Viability
 While this will largely be used by the founders of Capia, we believe we can market and sell its predictions to other 

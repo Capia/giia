@@ -20,8 +20,14 @@ __pycache__/
 out/
 
 # FreqTrade
-src/freqtrade/user_data/data
-src/freqtrade/user_data/logs
+src/freqtrade/user_data/data/
+src/freqtrade/user_data/logs/
+src/freqtrade/user_data/notebooks/.ipynb_checkpoints/
+src/freqtrade/user_data/backtest_results/
+src/freqtrade/user_data/hyperopt_results/
+src/freqtrade/user_data/hyperopt.lock
+src/freqtrade/user_data/tradesv3.sqlite
 
 # Other
 .DS_Store
+/src/test.csv
