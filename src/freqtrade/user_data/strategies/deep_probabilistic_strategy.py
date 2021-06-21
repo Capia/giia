@@ -39,36 +39,38 @@ class DeepProbabilisticStrategy(IStrategy):
         'sell': 'gtc'
     }
 
+    #   485/500:     27 trades. 20/0/7 Wins/Draws/Losses. Avg profit   1.70%. Median profit   1.84%. Total profit  451.44664289 USDT (   9.03Σ%). Avg duration 0:01:00 min. Objective: 0.84715
+
     # Buy hyperspace params:
     buy_params = {
         "buy_pred_close_diff_1": 3,  # value loaded from strategy
-        "buy_pred_close_diff_2": 3,  # value loaded from strategy
-        "buy_pred_close_diff_3": 1,  # value loaded from strategy
+        "buy_pred_close_diff_2": 1,  # value loaded from strategy
+        "buy_pred_close_diff_3": 2,  # value loaded from strategy
     }
 
     # Sell hyperspace params:
     sell_params = {
-        "sell_pred_close_diff_1": -3,  # value loaded from strategy
+        "sell_pred_close_diff_1": -1,  # value loaded from strategy
         "sell_pred_close_diff_2": 0,  # value loaded from strategy
-        "sell_pred_close_diff_3": 0,  # value loaded from strategy
+        "sell_pred_close_diff_3": -1,  # value loaded from strategy
     }
 
     # ROI table:
     minimal_roi = {
-        "0": 0.059,
-        "4": 0.026,
-        "14": 0.013,
-        "25": 0
+        "0": 0.085,
+        "8": 0.019,
+        "20": 0.003,
+        "36": 0
     }
 
     # Stoploss:
-    stoploss = -0.021
+    stoploss = -0.034
 
     # Trailing stop:
     trailing_stop = True
-    trailing_stop_positive = 0.173
-    trailing_stop_positive_offset = 0.218
-    trailing_only_offset_is_reached = False
+    trailing_stop_positive = 0.01
+    trailing_stop_positive_offset = 0.022
+    trailing_only_offset_is_reached = True
 
     # Define the hyperopt parameter spaces, defaults are overwritten by buy_params and sell_params above
     buy_pred_close_diff_1 = IntParameter(0, 6, default=1)
@@ -206,14 +208,26 @@ class DeepProbabilisticStrategy(IStrategy):
         is_backtest_mode = len(dataframe) > config.FREQTRADE_MAX_CONTEXT
 
         if self.config.get('return_cached_dataframe', False):
-            print(f"Returning cache dataframe from [{config.CACHED_PRED_CSV}]")
-            cached_dataframe = pd.read_csv(filepath_or_buffer=config.CACHED_PRED_CSV, header=0, index_col=0,
-                                           parse_dates=['date.1'])
+            print(f"Returning cache dataframe from [{config.CACHED_PRED_CSV_0}]")
+
+            cached_dataframe = pd.concat([
+                pd.read_csv(filepath_or_buffer=config.CACHED_PRED_CSV_0, header=0, index_col=0,
+                            parse_dates=['date.1']),
+                pd.read_csv(filepath_or_buffer=config.CACHED_PRED_CSV_1, header=0, index_col=0,
+                            parse_dates=['date.1'])
+            ])\
+                .reset_index()\
+                .drop_duplicates(subset='date', keep='last')\
+                .set_index('date').sort_index()
 
             first_index = str(dataframe['date'].iloc[0])
             last_index = str(dataframe['date'].iloc[-1])
             print(f"First index of provided df is [{first_index}], the last index is [{last_index}]")
-            cached_dataframe = cached_dataframe[first_index:last_index]
+            print(f"cached dataframe head [{cached_dataframe.head(10)}]")
+
+            if self.config.get('truncate_cached_dataframe', True):
+                print(f"Truncating cached dataframe to fit the provided dataframe's timeframe")
+                cached_dataframe = cached_dataframe[first_index:last_index]
 
             cached_dataframe.rename(columns={'date.1': 'date'}, inplace=True)
             return cached_dataframe

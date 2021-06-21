@@ -63,22 +63,16 @@ def train(model_args):
               f"= (length of train dataset [{train_dataset_length}]) / (batch size [{model_args.batch_size}])")
 
     ctx = _get_ctx()
-    distr_output = _get_distr_output()
+    distr_output = _get_distr_output(model_args)
+    num_hidden_dimensions = _get_hidden_dimensions(model_args)
 
     estimator = SimpleFeedForwardEstimator(
         freq=config.DATASET_FREQ,
         context_length=model_args.context_length,
         prediction_length=model_args.prediction_length,
-        # batch_size=True,
-        # dropout_rate=model_args.dropout_rate,
 
-        # num_hidden_dimensions=[20, 20],
-        num_hidden_dimensions=[10, 10],
-        # num_hidden_dimensions=[100, 200, 400, 400, 200],
-        # num_hidden_dimensions=[400, 400, 400, 400, 400, 400],
+        num_hidden_dimensions=num_hidden_dimensions,
         distr_output=distr_output,
-
-        # sampling=False,
 
         trainer=Trainer(
             ctx=ctx,
@@ -129,18 +123,32 @@ def _get_ctx():
     return ctx
 
 
-def _get_distr_output():
+def _get_distr_output(model_args):
     # TODO: Determine the correct distribution method. This article goes over some of the key differences
     # https://www.investopedia.com/articles/06/probabilitydistribution.asp
 
-    # distr_output = NegativeBinomialOutput()
-    # distr_output = PoissonOutput()
-    # distr_output = BetaOutput()
-    # distr_output = GaussianOutput()
-    distr_output = StudentTOutput()
+    if model_args.distr_output == "NegativeBinomialOutput":
+        distr_output = NegativeBinomialOutput()
+    elif model_args.distr_output == "PoissonOutput":
+        distr_output = PoissonOutput()
+    elif model_args.distr_output == "GaussianOutput":
+        distr_output = GaussianOutput()
+    elif model_args.distr_output == "StudentTOutput":
+        distr_output = StudentTOutput()
+    else:
+        raise ValueError(f"[{model_args.distr_output}] is not a valid choice")
 
     print(f"Using distr_output [{type(distr_output).__name__}]")
     return distr_output
+
+
+def _get_hidden_dimensions(model_args):
+    n_hidden_layer = model_args.n_hidden_layer
+    n_neurons_per_layer = model_args.n_neurons_per_layer
+    num_hidden_dimensions = [n_neurons_per_layer] * n_hidden_layer
+
+    print(f"num_hidden_dimensions=[{num_hidden_dimensions}]")
+    return num_hidden_dimensions
 
 
 def _print_metrics(agg_metrics, item_metrics, metadata):
@@ -149,18 +157,6 @@ def _print_metrics(agg_metrics, item_metrics, metadata):
             del agg_metrics[key]
     print("Aggregated performance")
     print(json.dumps(agg_metrics, indent=4))
-
-    # feature_columns_map = {}
-    # for feat in metadata.feat_static_cat:
-    #     if feat.name.startswith("feature_column_"):
-    #         feature_index = int(feat.name.split("_")[2])
-    #         feature_columns_map[feature_index] = feat.cardinality
-    # feature_columns = [feature_columns_map.get(ele, 0) for ele in range(len(feature_columns_map))]
-    #
-    # close_index = feature_columns.index("close")
-    # # close_index = feature_columns.index("log_return_close")
-    # print("'close' performance")
-    # print(item_metrics.iloc[close_index])
 
 
 # Used for inference. Once the model is trained, we can deploy it and this function will load the trained model. No-op
@@ -264,21 +260,17 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=config.HYPER_PARAMETERS["batch_size"])
     parser.add_argument('--prediction_length', type=int, default=config.HYPER_PARAMETERS["prediction_length"])
     parser.add_argument('--context_length', type=int, default=config.HYPER_PARAMETERS["context_length"])
-
-    parser.add_argument('--skip_size', type=int, default=config.HYPER_PARAMETERS["skip_size"])
-    parser.add_argument('--ar_window', type=int, default=config.HYPER_PARAMETERS["ar_window"])
-    parser.add_argument('--channels', type=int, default=config.HYPER_PARAMETERS["channels"])
-    parser.add_argument('--rnn_num_layers', type=int, default=config.HYPER_PARAMETERS["rnn_num_layers"])
-    parser.add_argument('--skip_rnn_num_layers', type=int, default=config.HYPER_PARAMETERS["skip_rnn_num_layers"])
-    parser.add_argument('--kernel_size', type=int, default=config.HYPER_PARAMETERS["kernel_size"])
-
-    parser.add_argument('--dropout_rate', type=float, default=config.HYPER_PARAMETERS["dropout_rate"])
     parser.add_argument('--learning_rate', type=float, default=config.HYPER_PARAMETERS["learning_rate"])
+
+    parser.add_argument('--n_hidden_layer', type=int, default=config.HYPER_PARAMETERS["n_hidden_layer"])
+    parser.add_argument('--n_neurons_per_layer', type=int, default=config.HYPER_PARAMETERS["n_neurons_per_layer"])
+    parser.add_argument('--distr_output', type=str, default=config.HYPER_PARAMETERS["distr_output"])
+
     parser.add_argument('--num_batches_per_epoch', type=float,
                         default=config.HYPER_PARAMETERS["num_batches_per_epoch"]
                         if "num_batches_per_epoch" in config.HYPER_PARAMETERS else None)
 
-    # For CLI use, otherwise ignore as the defaults will handle it
+    # For CLI use, otherwise ignore as the defaults will handle it (see `__main__`)
     parser.add_argument('--dataset_dir', type=str)
     parser.add_argument('--model_dir', type=str)
 

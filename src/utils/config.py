@@ -2,7 +2,7 @@
 from pathlib import Path
 
 MODEL_NAME = "giia"
-MODEL_VERSION = "0.7.6"
+MODEL_VERSION = "1.0.3"
 MODEL_ID = f"{MODEL_NAME}-{MODEL_VERSION}"
 
 SM_ROLE = 'arn:aws:iam::941048668662:role/service-role/AmazonSageMaker-ExecutionRole-20191206T145896'
@@ -12,7 +12,8 @@ TRAIN_DATASET_FILENAME = "train/data.json"
 TEST_DATASET_FILENAME = "test/data.json"
 TRAIN_CSV_FILENAME = "train.csv"
 TEST_CSV_FILENAME = "test.csv"
-CACHED_PRED_CSV = "../out/pred_cache.csv"
+CACHED_PRED_CSV_0 = "../out/pred_cache_0.csv"
+CACHED_PRED_CSV_1 = "../out/pred_cache_1.csv"
 
 DATASET_FREQ = "1min"
 
@@ -26,7 +27,7 @@ CRYPTO_PAIR = "ETH/USDT"
 # If you permanently update these values, then you should also update the MODEL_VERSION
 # https://docs.aws.amazon.com/sagemaker/latest/dg/deepar_hyperparameters.html
 _PROD_HYPER_PARAMETERS = {
-    'epochs': 4,
+    'epochs': 100,
     'batch_size': 256,
     'num_batches_per_epoch': 100,
     'prediction_length': 5,
@@ -37,6 +38,10 @@ _PROD_HYPER_PARAMETERS = {
 
     'num_layers': 8,
     'num_cells': 200,
+
+    'n_hidden_layer': 10,
+    'n_neurons_per_layer': 560,
+    'distr_output': "StudentTOutput",
 
     'skip_size': 32,
     'ar_window': 32,
@@ -53,7 +58,7 @@ _PROD_HYPER_PARAMETERS = {
 # these HPs can be used to get a general idea of how well the model may perform with PROD HPs, without the longer
 # wait time
 _MODERATE_HYPER_PARAMETERS = {
-    'epochs': 100,
+    'epochs': 10,
     'batch_size': 64,
     'num_batches_per_epoch': 100,
     'prediction_length': 5,
@@ -61,6 +66,10 @@ _MODERATE_HYPER_PARAMETERS = {
 
     'num_layers': 6,
     'num_cells': 160,
+
+    'n_hidden_layer': 10,
+    'n_neurons_per_layer': 560,
+    'distr_output': "StudentTOutput",
 
     'skip_size': 4,
     'ar_window': 8,
@@ -85,6 +94,10 @@ _SIMPLE_HYPER_PARAMETERS = {
     'num_layers': 1,
     'num_cells': 20,
 
+    'n_hidden_layer': 2,
+    'n_neurons_per_layer': 10,
+    'distr_output': "StudentTOutput",
+
     'skip_size': 2,
     'ar_window': 4,
     'channels': 20,
@@ -98,4 +111,4 @@ _SIMPLE_HYPER_PARAMETERS = {
 
 # DO NOT COMMIT ANY CHANGES TO THIS CONFIG `HYPER_PARAMETERS = _PROD_HYPER_PARAMETERS`. You can change it for testing,
 # just do not commit it
-HYPER_PARAMETERS = _MODERATE_HYPER_PARAMETERS
+HYPER_PARAMETERS = _PROD_HYPER_PARAMETERS

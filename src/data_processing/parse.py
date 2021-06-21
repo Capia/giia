@@ -52,8 +52,8 @@ class Parse:
         # Split dataset between training and testing
         train_df, test_df = np.array_split(
             df, (fractions[:-1].cumsum() * len(df)).astype(int))
-        self.logger.log(f"Train dataset starts at: {train_df['date'].iloc[0]}")
-        self.logger.log(f"Test dataset starts at: {test_df['date'].iloc[0]}")
+        self.logger.log(f"Train dataset starts at: {train_df.index[0]}")
+        self.logger.log(f"Test dataset starts at: {test_df.index[0]}")
 
         if filedataset_based:
             self.create_train_test_filedataset(dataset_dir_path, train_df, test_df, one_dim_target)
