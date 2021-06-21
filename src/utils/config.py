@@ -2,7 +2,7 @@
 from pathlib import Path
 
 MODEL_NAME = "giia"
-MODEL_VERSION = "0.7.6"
+MODEL_VERSION = "1.0.2"
 MODEL_ID = f"{MODEL_NAME}-{MODEL_VERSION}"
 
 SM_ROLE = 'arn:aws:iam::941048668662:role/service-role/AmazonSageMaker-ExecutionRole-20191206T145896'
@@ -12,7 +12,8 @@ TRAIN_DATASET_FILENAME = "train/data.json"
 TEST_DATASET_FILENAME = "test/data.json"
 TRAIN_CSV_FILENAME = "train.csv"
 TEST_CSV_FILENAME = "test.csv"
-CACHED_PRED_CSV = "../out/pred_cache.csv"
+CACHED_PRED_CSV_0 = "../out/pred_cache_0.csv"
+CACHED_PRED_CSV_1 = "../out/pred_cache_1.csv"
 
 DATASET_FREQ = "1min"
 
@@ -38,6 +39,10 @@ _PROD_HYPER_PARAMETERS = {
     'num_layers': 8,
     'num_cells': 200,
 
+    'n_hidden_layer': 15,
+    'n_neurons_per_layer': 410,
+    'distr_output': "StudentTOutput",
+
     'skip_size': 32,
     'ar_window': 32,
     'channels': 128,
@@ -62,6 +67,10 @@ _MODERATE_HYPER_PARAMETERS = {
     'num_layers': 6,
     'num_cells': 160,
 
+    'n_hidden_layer': 15,
+    'n_neurons_per_layer': 410,
+    'distr_output': "StudentTOutput",
+
     'skip_size': 4,
     'ar_window': 8,
     'channels': 40,
@@ -84,6 +93,10 @@ _SIMPLE_HYPER_PARAMETERS = {
 
     'num_layers': 1,
     'num_cells': 20,
+
+    'n_hidden_layer': 2,
+    'n_neurons_per_layer': 10,
+    'distr_output': "StudentTOutput",
 
     'skip_size': 2,
     'ar_window': 4,

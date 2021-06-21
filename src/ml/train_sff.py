@@ -52,16 +52,11 @@ class Train:
             'batch_size': config.HYPER_PARAMETERS['batch_size'],
             'context_length': config.HYPER_PARAMETERS['context_length'],
             'prediction_length': config.HYPER_PARAMETERS['prediction_length'],
-
-            'skip_size': config.HYPER_PARAMETERS['skip_size'],
-            'ar_window': config.HYPER_PARAMETERS['ar_window'],
-            'channels': config.HYPER_PARAMETERS['channels'],
-            'rnn_num_layers': config.HYPER_PARAMETERS['rnn_num_layers'],
-            'skip_rnn_num_layers': config.HYPER_PARAMETERS['skip_rnn_num_layers'],
-            'kernel_size': config.HYPER_PARAMETERS['kernel_size'],
-
-            'dropout_rate': config.HYPER_PARAMETERS['dropout_rate'],
             'learning_rate': config.HYPER_PARAMETERS['learning_rate'],
+
+            'n_hidden_layer': config.HYPER_PARAMETERS['n_hidden_layer'],
+            'n_neurons_per_layer': config.HYPER_PARAMETERS['n_neurons_per_layer'],
+            'distr_output': config.HYPER_PARAMETERS['distr_output'],
         }
 
         if "num_batches_per_epoch" in config.HYPER_PARAMETERS and config.HYPER_PARAMETERS['num_batches_per_epoch']:

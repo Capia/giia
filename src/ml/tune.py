@@ -30,8 +30,8 @@ class Tune:
             objective_type='Minimize',
             metric_definitions=[{'Name': 'loss', 'Regex': "gluonts\\[metric-MASE\\]: ([0-9\\.]+)"}],
             hyperparameter_ranges=self._get_manual_hyperparameters(),
-            max_jobs=15,
-            max_parallel_jobs=1
+            max_jobs=30,
+            max_parallel_jobs=4
         )
         return tuner
 
@@ -68,7 +68,7 @@ class Tune:
             if len(df) > 0:
                 df = df.sort_values('FinalObjectiveValue', ascending=self.is_minimize)
                 self.logger.log("Number of training jobs with valid objective: %d" % len(df))
-                self.logger.log({"lowest":min(df['FinalObjectiveValue']),"highest": max(df['FinalObjectiveValue'])})
+                self.logger.log({"lowest": min(df['FinalObjectiveValue']),"highest": max(df['FinalObjectiveValue'])})
                 pd.set_option('display.max_colwidth', -1)  # Don't truncate TrainingJobName
             else:
                 self.logger.log("No training jobs have reported valid results yet.")
@@ -89,12 +89,21 @@ class Tune:
 
     def _get_manual_hyperparameters(self):
         return {
-            'skip_size': CategoricalParameter([6, 9, 12, 15, 18]),
-            'ar_window': CategoricalParameter([6, 9, 12, 15, 18]),
-            'channels': CategoricalParameter([60, 90, 120, 150, 180]),
-            'rnn_num_layers': CategoricalParameter([60, 90, 120, 150, 180]),
-            'skip_rnn_num_layers': CategoricalParameter([6, 9, 12, 15, 18]),
-            'kernel_size': CategoricalParameter([6, 9, 12, 15, 18]),
+            'n_hidden_layer': IntegerParameter(10, 25),
+            'n_neurons_per_layer': IntegerParameter(100, 600),
+            # 'distr_output': CategoricalParameter([
+            #     "NegativeBinomialOutput",
+            #     "PoissonOutput",
+            #     "GaussianOutput",
+            #     "StudentTOutput"
+            # ]),
+
+            # 'skip_size': CategoricalParameter([6, 9, 12, 15, 18]),
+            # 'ar_window': CategoricalParameter([6, 9, 12, 15, 18]),
+            # 'channels': CategoricalParameter([60, 90, 120, 150, 180]),
+            # 'rnn_num_layers': CategoricalParameter([60, 90, 120, 150, 180]),
+            # 'skip_rnn_num_layers': CategoricalParameter([6, 9, 12, 15, 18]),
+            # 'kernel_size': CategoricalParameter([6, 9, 12, 15, 18]),
 
             # 'dropout_rate': ContinuousParameter(0.05, 0.20),
             # 'learning_rate': ContinuousParameter(0.0005, 0.01)
