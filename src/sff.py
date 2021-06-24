@@ -159,6 +159,15 @@ def _print_metrics(agg_metrics, item_metrics, metadata):
     print(json.dumps(agg_metrics, indent=4))
 
 
+# handler function to support lambda
+def handler(event, context):
+    model_dir = os.environ['SM_MODEL_DIR']
+    predictor = model_fn(model_dir)
+
+    body = json.loads(event['body'])
+    return transform_fn(predictor, body, event['Content-Type'], event['Accept-Type'])
+
+
 # Used for inference. Once the model is trained, we can deploy it and this function will load the trained model. No-op
 # implementation as default will properly handle decompressing and deserializing the model
 def model_fn(model_dir):

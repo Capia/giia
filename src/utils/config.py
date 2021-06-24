@@ -34,7 +34,7 @@ _PROD_HYPER_PARAMETERS = {
 
     # This cannot be longer than `FREQTRADE_MAX_CONTEXT`
     # Also, this significantly increases memory usage. Beware
-    'context_length': 60,
+    'context_length': 5,
 
     'num_layers': 8,
     'num_cells': 200,

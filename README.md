@@ -65,6 +65,37 @@ Lastly, jupyter cell output is distracting when looking at diffs and MRs. To rem
 `nbstripout` and git filters. I recommend installing it globally with `nbstripout --install --global`. Which ever way 
 you choose, ensure you check it is installed with `nbstripout --status`
 
+## Docker
+
+### Build Image
+First, acquire the serialized model `model.tar.gz` and note the location. This can be found locally if you ran the 
+training job locally, or it can be found in S3 if it was ran in AWS SageMaker. Additionally, there are notebooks to 
+help download the serialized model.
+
+Then, to build the image run:
+```
+export IMAGE_NAME="giia_probabilistic_distro_inference"
+export IMAGE_TAG="0.0.3"
+export MODEL_PATH="./out/giia-1.0.3/models/mxnet-training-2021-06-23-12-36-55-617/output/model.tar.gz"
+./scripts/build_image.sh ${IMAGE_NAME} ${IMAGE_TAG} ${MODEL_PATH}
+```
+
+And finally to push the image:
+```
+export IMAGE_NAME="giia_probabilistic_distro_inference"
+export IMAGE_TAG="0.0.3"
+./scripts/push_image.sh ${IMAGE_NAME} ${IMAGE_TAG}
+```
+
+### Test Locally
+In many cases, you will want to test your image locally before deploying. You can do this manually by first building
+the image from above, then running:
+```
+docker run -p 9000:8080 --rm -it ${IMAGE_NAME}
+```
+This will make the function available at `http://localhost:9000/2015-03-31/functions/function/invocations`. Don't ask 
+me where the "2015-03-31" comes from, it was in the docs and it works.
+
 ## Backlog
 ### TODO
 - Rolling time series (unreleased version of gluonts)

@@ -11,6 +11,7 @@ from freqtrade.strategy.interface import IStrategy
 # --------------------------------
 # Add your lib to import here
 from tqdm import tqdm
+import os
 
 import data_processing.marshal_features as mf
 from utils import config
@@ -91,7 +92,15 @@ class DeepProbabilisticStrategy(IStrategy):
         import requests
         import json
 
-        predictor_url = 'http://localhost:8080/invocations'
+        env_name = os.environ.get("ENV_NAME", "local")
+        if env_name == "prod":
+            predictor_url = 'https://a8f8yvclt4.execute-api.us-east-1.amazonaws.com/inference'
+        elif env_name == "staging":
+            predictor_url = 'https://cl9o4uz75i.execute-api.us-east-1.amazonaws.com/inference'
+        else:
+            predictor_url = 'http://localhost:8080/invocations'
+        print(f'env_name: [{env_name}]')
+        print(f'predictor_url: [{predictor_url}]')
 
         def get_predictions(raw_df):
             if isinstance(raw_df, pd.Series):
