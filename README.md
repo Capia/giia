@@ -74,16 +74,17 @@ help download the serialized model.
 
 Then, to build the image run:
 ```
-export IMAGE_TAG="0.0.8"
+export IMAGE_TAG="0.0.9"
 export MODEL_PATH="./out/giia-1.0.3/models/mxnet-training-2021-06-23-12-36-55-617/output/model.tar.gz"
 ./scripts/build_pdi_image.sh ${IMAGE_TAG} ${MODEL_PATH}
 ./scripts/build_ft_image.sh ${IMAGE_TAG}
 ```
 
-And finally to push the image:
+Finally, to push the image:
 ```
-export IMAGE_TAG="0.0.8"
-./scripts/push_image.sh ${IMAGE_TAG}
+export IMAGE_TAG="0.0.9"
+./scripts/push_pdi_image.sh ${IMAGE_TAG}
+./scripts/push_ft_image.sh ${IMAGE_TAG}
 ```
 
 ### Test Locally
