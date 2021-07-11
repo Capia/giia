@@ -3,8 +3,9 @@ version: '3'
 services:
   freqtrade:
     build:
-     context: .
-     dockerfile: "./docker/Dockerfile"
+      # context has to be the root of the repo so the Dockerfile can copy the source directory
+      context: ../../
+      dockerfile: "./src/freqtrade/Dockerfile"
     restart: unless-stopped
     container_name: freqtrade
 
@@ -18,13 +19,11 @@ services:
     volumes:
       - "../:/capia/src"
 
-    environment:
-      PYTHONPATH: "${PYTHONPATH}:/capia/src"
-
     # Expose api on port 8080 (localhost only)
     # Please read the https://www.freqtrade.io/en/latest/rest-api/ documentation
     # before enabling this.
-    network_mode: "host"
+    ports:
+      - "8080:8080"
 
     # Default command used when running `docker compose up`
     command: >

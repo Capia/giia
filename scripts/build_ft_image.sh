@@ -4,20 +4,20 @@
 # This script expects to be ran from the root of the repository
 #
 
-image=$1
-tag=$2
-model_path=$3
+tag=$1
+model_path=$2
 
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account | tr -d '"')
 AWS_REGION=$(aws configure get region)
+IMAGE="giia_freqtrade"
 
-
+image="${IMAGE}"
 echo "Building image [${image}]"
+
 docker build \
   -t ${image} \
   --build-arg MODEL_PATH=${model_path} \
-  -f Dockerfile .
+  -f ./src/freqtrade/Dockerfile .
 
-ecr_repo_prefix="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${image}"
-docker tag ${image} "${ecr_repo_prefix}_staging:${tag}"
-docker tag ${image} "${ecr_repo_prefix}_prod:${tag}"
+ecr_repo_prefix="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+docker tag ${image} "${ecr_repo_prefix}/${image}:${tag}"
