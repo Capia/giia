@@ -13,19 +13,9 @@ This encompasses using MXNet + GluonTS to create an AI model based on time serie
 SageMaker for its robust API and scalability.
 
 ## Model Architecture
-Currently the model is using DeepAR. However, other models listed below should be tested for their effectiveness. 
-LSTNet is likely the most promising.
-
-- **DeepAR** is a supervised learning algorithm for forecasting scalar time series using recurrent neural networks 
-  (RNN)
-- **SFeedFwd** (Simple Feedforward) is a supervised learning algorithm where information moves in only one 
-  direction—forward—from the input nodes, through the hidden nodes (if any) and to the output nodes in the forward 
-  direction
-- **LSTNet** (Long- and Short-term Time-series network) is a multivariate time series forecasting model that uses the 
-  combination of Convolution Neural Network (CNN) and the Recurrent Neural Network (RNN) to find short-term local 
-  dependency patterns among variables and them find long-term patterns for time series trends
-- **Seq2Seq** (Sequence-to-sequence learning) is a method to train models to convert sequences from one domain to 
-  sequences in another domain
+Currently, the project is based on a Simple Feedforward. SFeedFwd is a supervised learning algorithm where information 
+moves in only one direction—forward—from the input nodes, through the hidden nodes (if any) and to the output nodes in 
+the forward direction. Visit `./src/sff.py` for more information
 
 ## Getting Started
 First, set up a virtual environment:
@@ -146,10 +136,11 @@ https://towardsdatascience.com/aws-sagemaker-endpoint-as-rest-service-with-api-g
 While this will largely be used by the founders of Capia, we believe we can market and sell its predictions to other 
 users. Below are a few ideas to make Giia profitiable:
 1) Sell tokens to a limited number of people (this number should stay below 50). Here are a few different pricing models
-  - Cost per request, which is uniquely identified by the token. This works well because it is reoccuring and is 
+  - Cost per request, which is uniquely identified by the token. This works well because it is reoccurring and is 
   proportional to the usage and cost to run the infrastructure. We should round up this number and market it as buckets
-  - One time cost for token. This is not viable as there is a large upfront cost that will disaude customers. Also, 
-  since it is not reoccurring, it does not help support the infrastructure needed to provide the predictions
+  - One time cost for token. This is not viable as there is a large upfront cost that will dissuade customers. Also, 
+  since payment is not reoccurring, it does not help support continually running the infrastructure needed to provide 
+  the predictions
 2) Set up a chat room and channels whose access requires a $79(?) per month per user. This is a proven model, see
 boilingroomtrading https://boilerroomtrading.co, though we can uniquely market this a very effective AI based solution.
 Marketing material should pit it against other AI model stock predictors

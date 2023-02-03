@@ -76,7 +76,8 @@ def build_train_datasets(train_df, train_dataset, test_df, test_dataset, feature
                 CategoricalFeatureInfo(name="ts_train_length", cardinality=len(train_df)),
                 CategoricalFeatureInfo(name="ts_test_length", cardinality=len(test_df)),
 
-            ] + [CategoricalFeatureInfo(name=f"feature_column_{idx}", cardinality=feature_column) for idx, feature_column in enumerate(feature_columns)],
+            ] + [CategoricalFeatureInfo(name=f"feature_column_{idx}", cardinality=feature_column)
+                 for idx, feature_column in enumerate(feature_columns)],
 
             # Purposely leave out prediction_length as it will couple the hyper parameter to the dataset
         ),
