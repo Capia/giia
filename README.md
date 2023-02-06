@@ -18,21 +18,32 @@ moves in only one direction—forward—from the input nodes, through the hidden
 the forward direction. Visit `./src/sff.py` for more information
 
 ## Getting Started
-First, set up a virtual environment:
+We recommend using `pyenv` to manage your python versions. This project uses python 3.8, as denoted in 
+`.python-version`. This version is compatible with all of our major packages; gluonts, mxnet, and freqtrade.
+
+First, check python installation:
+```bash
+python -V
+
+# If the version is not 3.8, install it with:
+pyenv install
 ```
+
+Next, set up a virtual environment:
+```bash
 python -m venv venv
 source venv/bin/activate
 ```
 
 Then install the dependencies with:
-```
+```bash
 # Note that there are a few dependencies commented out inside the requirements.txt file. You need to install those 
 #  manually
 pip install -r ./src/requirements.txt
 ```
 
 Finally, set the jupyter notebook to use the virtual environment:
-```
+```bash
 python -m ipykernel install --user --name=giia --display-name="giia (venv)"
 ```
 

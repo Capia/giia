@@ -28,7 +28,7 @@ mxnet==1.9.1
 ## locally, be sure to install the version you machine is compatible with. Lastly, the version pinned here should be
 ## the same version found in train.py
 
-# freqtrade==2023.1
+freqtrade==2023.1
 ## freqtrade is purposely left out as it is needed for development and notebook execution, but not for training.
 ##  Amazon Sagemaker will use this requirements.txt to replicate our environment, which is a good thing, but the
 ##  Sagemaker docker image does not contain the necessary TA-Lib library. You can work around this with https://github.com/aws/amazon-sagemaker-examples/blob/master/advanced_functionality/pytorch_extending_our_containers/pytorch_extending_our_containers.ipynb
