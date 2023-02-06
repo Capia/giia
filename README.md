@@ -33,7 +33,7 @@ pip install -r ./src/requirements.txt
 
 Finally, set the jupyter notebook to use the virtual environment:
 ```
-python -m ipykernel install --user --name=capia --display-name="Capia (venv)"
+python -m ipykernel install --user --name=giia --display-name="giia (venv)"
 ```
 
 ### Datasets
