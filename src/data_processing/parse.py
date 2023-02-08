@@ -1,13 +1,14 @@
-import numpy as np
 from pathlib import Path
 
-from freqtrade.data.history import load_pair_history
+import numpy as np
 from freqtrade.configuration import Configuration
+from freqtrade.data.history import load_pair_history
+from gluonts.dataset.arrow import ArrowWriter
 
 import data_processing.gluonts_helper as gh
 import data_processing.marshal_features as mf
-from utils.logger_util import LoggerUtil
 from utils import config
+from utils.logger_util import LoggerUtil
 
 
 class Parse:
@@ -22,13 +23,16 @@ class Parse:
         dataset_dir_path.mkdir(parents=True, exist_ok=True)
 
         # First prime the user_data_dir key. This will take priority when merged with config.json
-        freqtrade_config = Configuration({"user_data_dir": config.FREQTRADE_USER_DATA_DIR})
-        freqtrade_config = freqtrade_config.load_from_files([str(config.FREQTRADE_USER_DATA_DIR / "config.json")])
+        freqtrade_config = Configuration({
+            "user_data_dir": config.FREQTRADE_USER_DATA_DIR,
+            "config": [str(config.FREQTRADE_USER_DATA_DIR / "config.json")]
+        })
+        # freqtrade_config = freqtrade_config.from_files([str(config.FREQTRADE_USER_DATA_DIR / "config.json")])
 
-        data_dir = config.FREQTRADE_USER_DATA_DIR / "data" / "binance"
+        data_dir = config.FREQTRADE_USER_DATA_DIR / "data" / "kraken"
         candles = load_pair_history(
             datadir=data_dir,
-            timeframe=freqtrade_config["timeframe"],
+            timeframe=freqtrade_config.get_config()["timeframe"],
             pair=config.CRYPTO_PAIR)
 
         if candles.empty:
@@ -78,7 +82,7 @@ class Parse:
 
         datasets = gh.build_train_datasets(train_df, train_dataset, test_df, test_dataset, feature_columns)
 
-        datasets.save(str(dataset_dir_path))
+        datasets.save(str(dataset_dir_path), ArrowWriter())
         self.logger.log(f"Parsed train and test datasets can be found in [{dataset_dir_path}]", 'debug')
 
     def create_train_test_csv(self, dataset_dir_path, train_df, test_df):

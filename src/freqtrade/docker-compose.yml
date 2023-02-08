@@ -25,6 +25,10 @@ services:
     ports:
       - "8080:8080"
 
+    # Environment variables from root of the repo
+    env_file:
+      - "../../.env"
+
     # Default command used when running `docker compose up`
     command: >
       trade
