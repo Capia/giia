@@ -21,9 +21,6 @@ from queue import Empty as QueueEmpty
 from typing import Callable, Iterable, List, NamedTuple, Set, Tuple
 from typing_extensions import Literal
 
-from flask import Flask, Response, jsonify, request
-from pydantic import BaseModel, Field
-
 from gluonts.dataset.common import ListDataset
 from gluonts.dataset.jsonl import encode_json
 from gluonts.model.forecast import Forecast, Quantile
@@ -286,3 +283,86 @@ def handler(event, context):
     else:
         invocations_fn = inference_invocations(predictor_factory)
     return transform_fn(predictor, body, event['Content-Type'], event['Accept-Type'])
+
+
+# Used for inference. Once the model is trained, we can deploy it and this function will load the trained model. No-op
+# implementation as default will properly handle decompressing and deserializing the model
+def model_fn(model_dir):
+    model_dir_path = Path(model_dir) / "model"
+    print(f"Model dir [{str(model_dir_path)}]")
+
+    predictor = Predictor.deserialize(model_dir_path)
+    print(f"Predictor metadata [{predictor.__dict__}]")
+
+    return predictor
+
+
+# Used for inference. This is the entry point for sending a request to receive a prediction
+def transform_fn(model, request_body, content_type, accept_type):
+    input_df = _input_fn(request_body, content_type)
+    forecast = _predict_fn(input_df, model)
+    json_output = _output_fn(forecast, accept_type)
+    return json_output
+
+
+def _input_fn(request_body: Union[str, bytes], request_content_type: str = "application/json") -> pd.DataFrame:
+    # byte array of json -> JSON object -> str in JSON format
+    request_json = json.dumps(json.loads(request_body))
+    df = pd.read_json(request_json, orient='split')
+
+    # Clean dataframe
+    df = df.drop(['sell', 'buy'], axis=1, errors='ignore')
+    df = df.drop(df.filter(regex='pred_close_').columns, axis=1, errors='ignore')
+
+    # Index by datetime
+    df = df.set_index('date')
+
+    # Then remove UTC timezone since GluonTS does not work with it
+    df.index = df.index.tz_localize(None)
+
+    return df
+
+
+def _predict_fn(input_df: pd.DataFrame, model: Predictor, num_samples=100) -> List[Forecast]:
+    import data_processing.gluonts_helper as gh
+    dataset = gh.df_to_univariate_dataset(input_df, freq=model.freq)
+    print(f"Dataset stats: {calculate_dataset_statistics(dataset)}")
+
+    print(f"Starting prediction...")
+    forecast_it = model.predict(dataset, num_samples=num_samples)
+    print(f"Finished prediction")
+
+    return list(forecast_it)
+
+
+# Because of transform_fn(), we cannot use output_fn() as function name.
+# Hence, we prefix our helper function with an underscore.
+def _output_fn(
+        forecasts: List[Forecast],
+        content_type: str = "application/json",
+) -> Union[str, Tuple[str, str]]:
+    # jsonify_floats is taken from gluonts/shell/serve/util.py
+    def jsonify_floats(json_object):
+        """Traverse through the JSON object and converts non JSON-spec compliant floats(nan, -inf, inf) to string.
+
+        Parameters
+        ----------
+        json_object
+            JSON object
+        """
+        if isinstance(json_object, dict):
+            return {k: jsonify_floats(v) for k, v in json_object.items()}
+        elif isinstance(json_object, list):
+            return [jsonify_floats(item) for item in json_object]
+        elif isinstance(json_object, float):
+            if np.isnan(json_object):
+                return "NaN"
+            elif np.isposinf(json_object):
+                return "Infinity"
+            elif np.isneginf(json_object):
+                return "-Infinity"
+            return json_object
+        return json_object
+
+    json_forecasts = json.dumps([ForecastConfig.as_json_dict(forecast) for forecast in forecasts])
+    return json_forecasts, content_type
