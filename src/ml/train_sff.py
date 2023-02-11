@@ -26,8 +26,8 @@ class Train:
             role=role,
             instance_type=instance_type,
             instance_count=1,
-            framework_version='1.8.0',  # Should be the same mxnet X.X.X version found in requirements.txt
-            py_version='py37',
+            framework_version='1.9.0',  # Should be the same mxnet X.X.X version found in requirements.txt
+            py_version='py38',
             sagemaker_session=sagemaker_session,
             enable_sagemaker_metrics=True,
             metric_definitions=self._get_metric_definitions(),

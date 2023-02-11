@@ -1,13 +1,15 @@
 # This file should be as basic as possible, with minimal dependencies. All paths should be relative to `./src`
 from pathlib import Path
 
+from utils import model
+
 MODEL_NAME = "giia"
 MODEL_VERSION = "1.0.3"
 MODEL_ID = f"{MODEL_NAME}-{MODEL_VERSION}"
 
 SM_ROLE = 'arn:aws:iam::941048668662:role/service-role/AmazonSageMaker-ExecutionRole-20191206T145896'
 
-METADATA_DATASET_FILENAME = "metadata/metadata.json"
+METADATA_DATASET_FILENAME = "metadata.json"
 TRAIN_DATASET_FILENAME = "train/data.json"
 TEST_DATASET_FILENAME = "test/data.json"
 TRAIN_CSV_FILENAME = "train.csv"
@@ -109,6 +111,6 @@ _SIMPLE_HYPER_PARAMETERS = {
     'learning_rate': 0.001
 }
 
-# DO NOT COMMIT ANY CHANGES TO THIS CONFIG `HYPER_PARAMETERS = _PROD_HYPER_PARAMETERS`. You can change it for testing,
-# just do not commit it
-HYPER_PARAMETERS = _PROD_HYPER_PARAMETERS
+# HYPER_PARAMETERS = _PROD_HYPER_PARAMETERS
+# HYPER_PARAMETERS = _MODERATE_HYPER_PARAMETERS
+HYPER_PARAMETERS = _SIMPLE_HYPER_PARAMETERS

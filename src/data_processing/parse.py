@@ -19,9 +19,6 @@ class Parse:
 
     def create_train_test_dataset(self, dataset_dir_path: Path, filedataset_based=True, one_dim_target=True,
                                   starting_date_truncate=None):
-        # Copy dataset channels to their respective file
-        dataset_dir_path.mkdir(parents=True, exist_ok=True)
-
         # First prime the user_data_dir key. This will take priority when merged with config.json
         freqtrade_config = Configuration({
             "user_data_dir": config.FREQTRADE_USER_DATA_DIR,
@@ -82,7 +79,7 @@ class Parse:
 
         datasets = gh.build_train_datasets(train_df, train_dataset, test_df, test_dataset, feature_columns)
 
-        datasets.save(str(dataset_dir_path), ArrowWriter())
+        datasets.save(str(dataset_dir_path), ArrowWriter(), overwrite=True)
         self.logger.log(f"Parsed train and test datasets can be found in [{dataset_dir_path}]", 'debug')
 
     def create_train_test_csv(self, dataset_dir_path, train_df, test_df):

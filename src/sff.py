@@ -1,6 +1,9 @@
 #
 # NOTE: This file must stay at the root of the `./src` directory due to sagemaker-local stripping the path from the
-#  entry_point. Follow this issue for new developments https://github.com/aws/sagemaker-python-sdk/issues/1597
+#  entry_point. Follow this issue for new developments https://github.com/aws/sagemaker-python-sdk/issues/1597.
+#
+# GluonTS provides an example module for serving models. This module is based on that example, and includes support
+#  Lambda functions.
 #
 import os
 
@@ -19,11 +22,12 @@ from gluonts.dataset.common import load_datasets
 from gluonts.dataset.stat import calculate_dataset_statistics
 from gluonts.evaluation.backtest import backtest_metrics, make_evaluation_predictions
 from gluonts.evaluation import Evaluator
-from gluonts.model.deep_factor import DeepFactorEstimator
-from gluonts.model.deepstate import DeepStateEstimator
+from gluonts.mx.model.deep_factor import DeepFactorEstimator
+from gluonts.mx.model.deepstate import DeepStateEstimator
+from gluonts.mx.model.simple_feedforward import SimpleFeedForwardEstimator
 from gluonts.model.predictor import Predictor
-from gluonts.model.forecast import Config, Forecast
-from gluonts.model.simple_feedforward import SimpleFeedForwardEstimator
+from gluonts.model.forecast import Forecast
+from gluonts.shell.serve.app import ForecastConfig
 from gluonts.mx.distribution import NegativeBinomialOutput, StudentTOutput, PoissonOutput, BetaOutput, GaussianOutput
 from gluonts.mx.trainer import Trainer
 from mxnet.runtime import feature_list
@@ -31,7 +35,7 @@ from mxnet.runtime import feature_list
 from utils import config
 
 
-# Creates a training and testing ListDataset, a DeepAR estimator, and performs the training. It also performs
+# Creates a training and testing ListDataset, an SFF estimator, and performs the training. It also performs
 # evaluation and prints performance metrics
 def train(model_args):
     _describe_model(model_args)
@@ -159,15 +163,6 @@ def _print_metrics(agg_metrics, item_metrics, metadata):
     print(json.dumps(agg_metrics, indent=4))
 
 
-# handler function to support lambda
-def handler(event, context):
-    model_dir = os.environ['SM_MODEL_DIR']
-    predictor = model_fn(model_dir)
-
-    body = json.loads(event['body'])
-    return transform_fn(predictor, body, event['Content-Type'], event['Accept-Type'])
-
-
 # Used for inference. Once the model is trained, we can deploy it and this function will load the trained model. No-op
 # implementation as default will properly handle decompressing and deserializing the model
 def model_fn(model_dir):
@@ -181,7 +176,6 @@ def model_fn(model_dir):
 
 
 # Used for inference. This is the entry point for sending a request to receive a prediction
-# https://sagemaker.readthedocs.io/en/stable/frameworks/mxnet/using_mxnet.html#serve-an-mxnet-model
 def transform_fn(model, request_body, content_type, accept_type):
     input_df = _input_fn(request_body, content_type)
     forecast = _predict_fn(input_df, model)
@@ -224,7 +218,6 @@ def _predict_fn(input_df: pd.DataFrame, model: Predictor, num_samples=100) -> Li
 def _output_fn(
         forecasts: List[Forecast],
         content_type: str = "application/json",
-        config: Config = Config(quantiles=["0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9"]),
 ) -> Union[str, Tuple[str, str]]:
     # jsonify_floats is taken from gluonts/shell/serve/util.py
     def jsonify_floats(json_object):
@@ -249,18 +242,8 @@ def _output_fn(
             return json_object
         return json_object
 
-    json_forecasts = json.dumps([forecast.as_json_dict(config) for forecast in forecasts])
+    json_forecasts = json.dumps([ForecastConfig.as_json_dict(forecast) for forecast in forecasts])
     return json_forecasts, content_type
-
-
-def _describe_model(model_args):
-    print(f"Using the follow arguments: [{model_args}]")
-
-    print(f"The model id is [{config.MODEL_ID}]")
-    print(f"The MXNet version is [{mxnet.__version__}]")
-    print(f"The GluonTS version is [{gluonts.__version__}]")
-    print(f"The GPU count is [{mxnet.context.num_gpus()}]")
-    print(f"{feature_list()}")
 
 
 def parse_args():
@@ -288,7 +271,7 @@ def parse_args():
 
 if __name__ == '__main__':
     """
-    To quickly iterate, you can run this via cli with `python3 -m deepar --dataset_dir ../out/datasets --model_dir ../out/local_cli/model`.
+    To quickly iterate, you can run this via cli with `python3 -m sff --dataset_dir ../out/datasets --model_dir ../out/local_cli/model`.
     This assumes that you have a valid dataset, which can be created via the train notebook
     """
     args = parse_args()

@@ -50,6 +50,17 @@ python -m ipykernel install --user --name=giia --display-name="giia (venv)"
 ### Datasets
 To download training and test datasets, read `./src/freqtrade/README.md`
 
+### Running Locally
+You have two options to train and test the model locally. You can run it natively with python, or you can run it with 
+docker. The recommended developer workflow is to run it natively with python for quicker iteration, and then run it 
+with docker through the jupyter notebook. The local docker container will be the same as production, so this is a 
+good smoke test to ensure it works before spending compute hours in the cloud.
+
+To run locally:
+```bash
+python sff.py --batch_size 256 --context_length 5 --distr_output StudentTOutput --epochs 100 --learning_rate 0.001 --n_hidden_layer 10 --n_neurons_per_layer 560 --num_batches_per_epoch 100 --prediction_length 5
+```
+
 ### Running in AWS
 This repo makes use of AWS Sagemaker's SDK which allows you to test and iterate quickly on your dev machine, before 
 running a training session. To enable local execution change the `train_instance_type` of your estimator to `local`. 
