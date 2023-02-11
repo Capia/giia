@@ -1,13 +1,9 @@
 import os
 import pydoc
 from pathlib import Path
-from typing import Type, Union
-
-from gluonts.model import Estimator, Predictor
+from typing import Type
 
 from utils.model import ModelHyperParameters, ModelBase
-
-Forecaster = Type[Union[Estimator, Predictor]]
 
 
 # Based on gluonts.shell.serve
@@ -35,6 +31,5 @@ if __name__ == '__main__':
     model_output_dir_path = Path(args.model_dir)
     model_output_dir_path.mkdir(parents=True, exist_ok=True)
 
-    # TODO: Make this model name dynamic
-    model = model_type_by_name('sff')
+    model = model_type_by_name(args.model_type)
     model(args).train()

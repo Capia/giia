@@ -1,11 +1,10 @@
 # This file should be as basic as possible, with minimal dependencies. All paths should be relative to `./src`
 from pathlib import Path
 
-from utils import model
-
 MODEL_NAME = "giia"
+MODEL_TYPE = "sff"
 MODEL_VERSION = "1.0.3"
-MODEL_ID = f"{MODEL_NAME}-{MODEL_VERSION}"
+MODEL_ID = f"{MODEL_NAME}-{MODEL_TYPE}-{MODEL_VERSION}"
 
 SM_ROLE = 'arn:aws:iam::941048668662:role/service-role/AmazonSageMaker-ExecutionRole-20191206T145896'
 

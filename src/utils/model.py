@@ -12,6 +12,7 @@ from utils import config
 
 
 class ModelHyperParameters(Tap):
+    model_type: str = config.MODEL_TYPE
     epochs: int = config.HYPER_PARAMETERS["epochs"]
     batch_size: int = config.HYPER_PARAMETERS["batch_size"]
     num_batches_per_epoch: int = config.HYPER_PARAMETERS["num_batches_per_epoch"]
