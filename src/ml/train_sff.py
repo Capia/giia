@@ -21,7 +21,7 @@ class Train:
 
     def create_model(self, role, instance_type: str, sagemaker_session: Session, kwargs):
         estimator = MXNet(
-            entry_point='sff.py',
+            entry_point='model.py',
             source_dir=os.getcwd(),
             role=role,
             instance_type=instance_type,
@@ -48,6 +48,7 @@ class Train:
 
     def _get_hyperparameters(self) -> dict:
         hp = {
+            'model_type': config.MODEL_TYPE,
             'epochs': config.HYPER_PARAMETERS['epochs'],
             'batch_size': config.HYPER_PARAMETERS['batch_size'],
             'context_length': config.HYPER_PARAMETERS['context_length'],

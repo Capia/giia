@@ -12,6 +12,7 @@ sagemaker==2.111.0
 jenkspy==0.3.2
 tqdm==4.64.1
 nbstripout==0.6.1
+typed-argument-parser==1.7.2
 
 gluonts==0.12.1
 # git+https://github.com/awslabs/gluon-ts@master#egg=gluonts

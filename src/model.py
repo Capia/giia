@@ -23,10 +23,6 @@ if __name__ == '__main__':
     This assumes that you have a valid dataset, which can be created via the train notebook
     """
     args = ModelHyperParameters().parse_args()
-    if not args.dataset_dir:
-        args.dataset_dir = os.environ['SM_CHANNEL_DATASET']
-    if not args.model_dir:
-        args.model_dir = os.environ['SM_MODEL_DIR']
 
     model_output_dir_path = Path(args.model_dir)
     model_output_dir_path.mkdir(parents=True, exist_ok=True)

@@ -1,4 +1,5 @@
 import json
+import os
 from typing import Optional
 
 import gluonts
@@ -31,8 +32,14 @@ class ModelHyperParameters(Tap):
     kernel_size: int = config.HYPER_PARAMETERS["kernel_size"]
     dropout_rate: float = config.HYPER_PARAMETERS["dropout_rate"]
     learning_rate: float = config.HYPER_PARAMETERS["learning_rate"]
-    dataset_dir: Optional[str]
-    model_dir: Optional[str]
+    dataset_dir: Optional[str] = None
+    model_dir: Optional[str] = None
+
+    def process_args(self):
+        if not self.dataset_dir:
+            self.dataset_dir = os.environ['SM_CHANNEL_DATASET']
+        if not self.model_dir:
+            self.model_dir = os.environ['SM_MODEL_DIR']
 
 
 class ModelBase:
