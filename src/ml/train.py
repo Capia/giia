@@ -85,6 +85,7 @@ class Train:
         return [
             {"Name": "train:loss", "Regex": r"Epoch\[\d+\] Evaluation metric 'epoch_loss'=(\S+)"},
             {"Name": "train:learning_rate", "Regex": r"Epoch\[\d+\] Learning rate is (\S+)"},
+            {"Name": "validation:loss", "Regex": r"Epoch\[\d+\] Evaluation metric 'validation_epoch_loss'=(\S+)"},
             {"Name": "test:abs_error", "Regex": r"gluonts\[metric-abs_error\]: (\S+)"},
             {"Name": "test:rmse", "Regex": r"gluonts\[metric-RMSE\]: (\S+)"},
             {"Name": "test:mase", "Regex": r"gluonts\[metric-MASE\]: (\S+)"},
