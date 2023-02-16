@@ -3,7 +3,10 @@
 Any major version change should be accompanied by a hyperparameter tuning job to give us insight for the best parameters
  for that model's architecture.
 
-| Version | Commit # | Accuracy (loss) | dropout_rate | epochs | num_layers | prediction_length | link |
-|---|---|---|---|---|---|---|---|
-| 0.3.3 | ab77d3e33f2641fd4dc09203da97402069dd4068 | 9867.0594 | 0.02688249593944054 | 6 | 4 | 13 | https://console.aws.amazon.com/sagemaker/home?region=us-east-1#/hyper-tuning-jobs/mxnet-training-200414-0823?region=us-east-1&tab=bestTrainingJob |
-| 0.5.3 | 8a54ad378ba48a98638870ff9181f02cb7c69db4 | 56489.1328 | 0.1844849452340674 | 30 | 6 | 15 | https://us-east-2.console.aws.amazon.com/sagemaker/home?region=us-east-2#/hyper-tuning-jobs/mxnet-training-210326-1446?tab=bestTrainingJob |
+- MAPE: Mean Absolute Percentage Error. Unit is percentage, which makes it easy to compare across different models.
+- RMSE: Root Mean Squared Error. Unit is the same as the target variable (value of USD/ETH), which helps set 
+expectations of the models's accuracy.
+
+| Version | Commit #                                 | MAPE              | RMSE               | # of Parameters | Training set size | Testing set size | epochs | link                                                                                                                  |
+|---------|------------------------------------------|-------------------|--------------------|-----------------|-------------------|------------------|--------|-----------------------------------------------------------------------------------------------------------------------|
+| 1.0.3   | 5662f487039ccf7aef35f9b560d293f3d8ea99f9 | 2.503210258483887 | 1.5821536772652292 | 3419139         | 1142136           | 489488           | 20     | https://us-east-1.console.aws.amazon.com/sagemaker/home?region=us-east-1#/jobs/mxnet-training-2023-02-11-14-31-11-050 |

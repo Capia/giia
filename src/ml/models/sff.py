@@ -19,8 +19,6 @@ from utils import config
 from utils.model import ModelBase
 
 
-# Creates a training and testing ListDataset, an SFF estimator, and performs the training. It also performs
-# evaluation and prints performance metrics
 class Model(ModelBase):
     def train(self):
         self._describe_model()
@@ -36,22 +34,20 @@ class Model(ModelBase):
             test=(dataset_dir_path / config.TEST_DATASET_FILENAME).parent,
             cache=True
         )
-        print(f"Train dataset stats: {calculate_dataset_statistics(datasets.train)}")
-        print(f"Test dataset stats: {calculate_dataset_statistics(datasets.test)}")
-
-        # Get precomputed train length to prevent iterating through a large dataset in memory
-        num_series = int(
-            next(feat.cardinality for feat in datasets.metadata.feat_static_cat if feat.name == "num_series"))
-        print(f"num_series = [{num_series}]")
-
-        train_dataset_length = int(next(feat.cardinality
-                                        for feat in datasets.metadata.feat_static_cat if
-                                        feat.name == "ts_train_length"))
+        train_stats = calculate_dataset_statistics(datasets.train)
+        print(f"Train dataset stats: {train_stats}")
+        test_stats = calculate_dataset_statistics(datasets.test)
+        print(f"Test dataset stats: {test_stats}")
 
         if not self.model_hp.num_batches_per_epoch:
-            self.model_hp.num_batches_per_epoch = train_dataset_length // self.model_hp.batch_size
+            self.model_hp.num_batches_per_epoch = train_stats.max_target_length // self.model_hp.batch_size
             print(f"Defaulting num_batches_per_epoch to: [{self.model_hp.num_batches_per_epoch}] "
-                  f"= (length of train dataset [{train_dataset_length}]) / (batch size [{self.model_hp.batch_size}])")
+                  f"= (length of train dataset [{train_stats.max_target_length}]) "
+                  f"/ (batch size [{self.model_hp.batch_size}])")
+        print(f"Note that the max number of samples from the training dataset that can be used is "
+              f"[{self.model_hp.num_batches_per_epoch * self.model_hp.batch_size * self.model_hp.epochs}]. This should "
+              f"be larger than the number of samples in the training dataset [{train_stats.max_target_length}] or you "
+              f"risk not using the full dataset.")
 
         ctx = self._get_ctx()
         distr_output = self._get_distr_output()

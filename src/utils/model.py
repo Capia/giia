@@ -45,7 +45,7 @@ class ModelHyperParameters(Tap):
 class ModelBase:
     """
     Wrapper class with useful methods for all models. This class should not be instantiated directly. Instead, use one
-    of the subclasses in `src/models/`. They all inherit from this class and override the `train` method.
+    of the subclasses in `src/ml/models/`. They all inherit from this class and override the `train` method.
     """
 
     model_hp = None

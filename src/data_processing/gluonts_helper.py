@@ -63,22 +63,10 @@ def df_to_multivariate_target_dataset(df, feature_columns, freq=config.DATASET_F
     )
 
 
-def build_train_datasets(train_df, train_dataset, test_df, test_dataset, feature_columns):
+def build_train_datasets(train_dataset, test_dataset):
     return TrainDatasets(
         metadata=MetaData(
             freq=config.DATASET_FREQ,
-            # target={'name': 'close'},
-            feat_static_cat=[
-                CategoricalFeatureInfo(name="num_series", cardinality=len(feature_columns)),
-
-                # Not features actually used by the network. Just storing the metadata so it doesn't have to
-                # be calculated later with an iterator
-                CategoricalFeatureInfo(name="ts_train_length", cardinality=len(train_df)),
-                CategoricalFeatureInfo(name="ts_test_length", cardinality=len(test_df)),
-
-            ] + [CategoricalFeatureInfo(name=f"feature_column_{idx}", cardinality=feature_column)
-                 for idx, feature_column in enumerate(feature_columns)],
-
             # Purposely leave out prediction_length as it will couple the hyper parameter to the dataset
         ),
         train=train_dataset,

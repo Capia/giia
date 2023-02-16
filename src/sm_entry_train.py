@@ -17,10 +17,6 @@ def model_type_by_name(name: str) -> Type[ModelBase]:
 
 
 if __name__ == '__main__':
-    """
-    To quickly iterate, you can run this via cli with `python3 -m sm_entry_train --dataset_dir ../out/datasets --model_dir ../out/local_cli/model`.
-    This assumes that you have a valid dataset, which can be created via the train notebook
-    """
     args = ModelHyperParameters().parse_args()
 
     model_output_dir_path = Path(args.model_dir)

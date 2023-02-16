@@ -9,8 +9,8 @@ MODEL_ID = f"{MODEL_NAME}-{MODEL_TYPE}-{MODEL_VERSION}"
 SM_ROLE = 'arn:aws:iam::941048668662:role/service-role/AmazonSageMaker-ExecutionRole-20191206T145896'
 
 METADATA_DATASET_FILENAME = "metadata.json"
-TRAIN_DATASET_FILENAME = "train/data.json"
-TEST_DATASET_FILENAME = "test/data.json"
+TRAIN_DATASET_FILENAME = "train/data.feather"
+TEST_DATASET_FILENAME = "test/data.feather"
 TRAIN_CSV_FILENAME = "train.csv"
 TEST_CSV_FILENAME = "test.csv"
 CACHED_PRED_CSV_0 = "../out/pred_cache_0.csv"
@@ -28,7 +28,7 @@ CRYPTO_PAIR = "ETH/USDT"
 # If you permanently update these values, then you should also update the MODEL_VERSION
 # https://docs.aws.amazon.com/sagemaker/latest/dg/deepar_hyperparameters.html
 _PROD_HYPER_PARAMETERS = {
-    'epochs': 100,
+    'epochs': 20,
     'batch_size': 256,
     'num_batches_per_epoch': 100,
     'prediction_length': 5,
@@ -38,10 +38,10 @@ _PROD_HYPER_PARAMETERS = {
     'context_length': 5,
 
     'num_layers': 8,
-    'num_cells': 200,
+    'num_cells': 256,
 
     'n_hidden_layer': 10,
-    'n_neurons_per_layer': 560,
+    'n_neurons_per_layer': 512,
     'distr_output': "StudentTOutput",
 
     'skip_size': 32,
@@ -66,16 +66,16 @@ _MODERATE_HYPER_PARAMETERS = {
     'context_length': 5,
 
     'num_layers': 6,
-    'num_cells': 160,
+    'num_cells': 192,
 
-    'n_hidden_layer': 10,
-    'n_neurons_per_layer': 560,
+    'n_hidden_layer': 8,
+    'n_neurons_per_layer': 512,
     'distr_output': "StudentTOutput",
 
     'skip_size': 4,
     'ar_window': 8,
-    'channels': 40,
-    'rnn_num_layers': 40,
+    'channels': 64,
+    'rnn_num_layers': 64,
     'skip_rnn_num_layers': 4,
     'kernel_size': 4,
 
