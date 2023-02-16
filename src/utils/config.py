@@ -2,8 +2,8 @@
 from pathlib import Path
 
 MODEL_NAME = "giia"
-MODEL_TYPE = "sff"
-MODEL_VERSION = "1.0.3"
+MODEL_TYPE = "transformer"
+MODEL_VERSION = "1.1.1"
 MODEL_ID = f"{MODEL_NAME}-{MODEL_TYPE}-{MODEL_VERSION}"
 
 SM_ROLE = 'arn:aws:iam::941048668662:role/service-role/AmazonSageMaker-ExecutionRole-20191206T145896'
@@ -35,7 +35,7 @@ _PROD_HYPER_PARAMETERS = {
 
     # This cannot be longer than `FREQTRADE_MAX_CONTEXT`
     # Also, this significantly increases memory usage. Beware
-    'context_length': 5,
+    'context_length': 60,
 
     'num_layers': 8,
     'num_cells': 256,
@@ -59,11 +59,11 @@ _PROD_HYPER_PARAMETERS = {
 # these HPs can be used to get a general idea of how well the model may perform with PROD HPs, without the longer
 # wait time
 _MODERATE_HYPER_PARAMETERS = {
-    'epochs': 10,
+    'epochs': 5,
     'batch_size': 64,
     'num_batches_per_epoch': 100,
     'prediction_length': 5,
-    'context_length': 5,
+    'context_length': 30,
 
     'num_layers': 6,
     'num_cells': 192,
@@ -90,7 +90,7 @@ _SIMPLE_HYPER_PARAMETERS = {
     'batch_size': 16,
     'num_batches_per_epoch': 10,
     'prediction_length': 5,
-    'context_length': 60,
+    'context_length': 10,
 
     'num_layers': 1,
     'num_cells': 20,
@@ -111,5 +111,5 @@ _SIMPLE_HYPER_PARAMETERS = {
 }
 
 # HYPER_PARAMETERS = _PROD_HYPER_PARAMETERS
-# HYPER_PARAMETERS = _MODERATE_HYPER_PARAMETERS
-HYPER_PARAMETERS = _SIMPLE_HYPER_PARAMETERS
+HYPER_PARAMETERS = _MODERATE_HYPER_PARAMETERS
+# HYPER_PARAMETERS = _SIMPLE_HYPER_PARAMETERS

@@ -4,7 +4,7 @@ from gluonts.dataset.common import load_datasets
 from gluonts.dataset.stat import calculate_dataset_statistics
 from gluonts.evaluation import Evaluator
 from gluonts.evaluation.backtest import backtest_metrics
-from gluonts.mx.model.simple_feedforward import SimpleFeedForwardEstimator
+from gluonts.mx import TransformerEstimator
 from gluonts.mx.trainer import Trainer
 
 from utils import config
@@ -45,11 +45,17 @@ class Model(ModelBase):
         distr_output = self._get_distr_output()
         num_hidden_dimensions = self._get_hidden_dimensions()
 
-        estimator = SimpleFeedForwardEstimator(
+        estimator = TransformerEstimator(
+            freq=config.DATASET_FREQ,
             context_length=self.model_hp.context_length,
             prediction_length=self.model_hp.prediction_length,
 
-            num_hidden_dimensions=num_hidden_dimensions,
+            # model_dim=self.model_hp.model_dim,
+            # inner_ff_dim_scale=self.model_hp.inner_ff_dim_scale,
+            # act_type=self.model_hp.act_type,
+            # num_heads=self.model_hp.num_heads,
+            # scaling=self.model_hp.scaling,
+
             distr_output=distr_output,
             batch_size=self.model_hp.batch_size,
 
