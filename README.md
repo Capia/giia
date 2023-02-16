@@ -18,37 +18,53 @@ moves in only one direction—forward—from the input nodes, through the hidden
 the forward direction. Visit `./src/sff.py` for more information
 
 ## Getting Started
-First, set up a virtual environment:
+We recommend using `pyenv` to manage your python versions. This project uses python 3.8, as denoted in 
+`.python-version`. This version is compatible with all of our major packages; gluonts, mxnet, and freqtrade.
+
+First, check python installation:
+```bash
+python -V
+
+# If the version is not 3.8, install it with:
+pyenv install
 ```
+
+Next, set up a virtual environment:
+```bash
 python -m venv venv
 source venv/bin/activate
 ```
 
 Then install the dependencies with:
-```
+```bash
 # Note that there are a few dependencies commented out inside the requirements.txt file. You need to install those 
 #  manually
 pip install -r ./src/requirements.txt
 ```
 
 Finally, set the jupyter notebook to use the virtual environment:
-```
-python -m ipykernel install --user --name=capia --display-name="Capia (venv)"
+```bash
+python -m ipykernel install --user --name=giia --display-name="giia (venv)"
 ```
 
 ### Datasets
 To download training and test datasets, read `./src/freqtrade/README.md`
 
-### Running in AWS
+### Training Locally
+You have two options to train the model locally. You can run it natively with python, or you can run it with 
+docker. The recommended developer workflow is to run it natively with python for quicker iteration, and then run it 
+with docker through the jupyter notebook. The local docker container will be the same as production, so this is a 
+good smoke test to ensure it works before spending compute hours in the cloud.
+
+To train locally:
+```bash
+python -m sm_entry_train --dataset_dir ../out/datasets --model_dir ../out/local_cli/model
+```
+
+### Training in AWS
 This repo makes use of AWS Sagemaker's SDK which allows you to test and iterate quickly on your dev machine, before 
 running a training session. To enable local execution change the `train_instance_type` of your estimator to `local`. 
 Running locally requires Docker, make sure that it is installed and running.
-
-### Metrics to Care About
-For instance, the lower the Root-Mean-Squared Error (RMSE) the better - a value of 0 would indicate a perfect fit to the
-data. But RMSE is dependent on the scale of the data being used. Dividing the RMSE by the range of the data, gives an
-average error as a proportion of the data's scale. This is called the Normalized Root-Mean-Squared Error (NRMSE).
-However, the RMSE and NRMSE are very sensitive to outliers.
 
 ### Developer Workflow
 Lastly, jupyter cell output is distracting when looking at diffs and MRs. To remove this, we use a tool called 

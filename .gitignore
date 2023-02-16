@@ -5,6 +5,9 @@
 # VS Code
 .vscode/
 
+# Secrets
+.env
+
 # Notebook logs
 src/*.log
 

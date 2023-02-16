@@ -33,7 +33,6 @@ is advised that you read more into the documentation while you are there. You ca
 `-vvv`, which prints varying levels of logging (like cURL).
 
 The first thing you should do is build the image wrapper around the freqtrade image:
-
 ```
 docker-compose build --no-cache
 ```
@@ -45,13 +44,11 @@ the docker image on build.
 
 At this point you should have FreqTrade configured the way you like and a local docker image with all the necessary
 dependencies. Now you are ready to download some data:
-
 ```
-docker-compose run -w /capia/src/freqtrade --rm freqtrade download-data --timerange 20170101- -v
+docker-compose run -w /capia/src/freqtrade --rm freqtrade download-data --dl-trades --timerange 20170101- -v
 ```
 
 Lastly, you can just start the container in one terminal and connect to it in another container like so:
-
 ```
 # with docker-compose up (recommended)
 docker-compose up

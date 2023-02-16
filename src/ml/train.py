@@ -21,13 +21,13 @@ class Train:
 
     def create_model(self, role, instance_type: str, sagemaker_session: Session, kwargs):
         estimator = MXNet(
-            entry_point='sff.py',
+            entry_point='sm_entry_train.py',
             source_dir=os.getcwd(),
             role=role,
             instance_type=instance_type,
             instance_count=1,
-            framework_version='1.8.0',  # Should be the same mxnet X.X.X version found in requirements.txt
-            py_version='py37',
+            framework_version='1.9.0',  # Should be the same mxnet X.X.X version found in requirements.txt
+            py_version='py38',
             sagemaker_session=sagemaker_session,
             enable_sagemaker_metrics=True,
             metric_definitions=self._get_metric_definitions(),
@@ -48,20 +48,16 @@ class Train:
 
     def _get_hyperparameters(self) -> dict:
         hp = {
+            'model_type': config.MODEL_TYPE,
             'epochs': config.HYPER_PARAMETERS['epochs'],
             'batch_size': config.HYPER_PARAMETERS['batch_size'],
             'context_length': config.HYPER_PARAMETERS['context_length'],
             'prediction_length': config.HYPER_PARAMETERS['prediction_length'],
-
-            'skip_size': config.HYPER_PARAMETERS['skip_size'],
-            'ar_window': config.HYPER_PARAMETERS['ar_window'],
-            'channels': config.HYPER_PARAMETERS['channels'],
-            'rnn_num_layers': config.HYPER_PARAMETERS['rnn_num_layers'],
-            'skip_rnn_num_layers': config.HYPER_PARAMETERS['skip_rnn_num_layers'],
-            'kernel_size': config.HYPER_PARAMETERS['kernel_size'],
-
-            'dropout_rate': config.HYPER_PARAMETERS['dropout_rate'],
             'learning_rate': config.HYPER_PARAMETERS['learning_rate'],
+
+            'n_hidden_layer': config.HYPER_PARAMETERS['n_hidden_layer'],
+            'n_neurons_per_layer': config.HYPER_PARAMETERS['n_neurons_per_layer'],
+            'distr_output': config.HYPER_PARAMETERS['distr_output'],
         }
 
         if "num_batches_per_epoch" in config.HYPER_PARAMETERS and config.HYPER_PARAMETERS['num_batches_per_epoch']:
@@ -89,6 +85,7 @@ class Train:
         return [
             {"Name": "train:loss", "Regex": r"Epoch\[\d+\] Evaluation metric 'epoch_loss'=(\S+)"},
             {"Name": "train:learning_rate", "Regex": r"Epoch\[\d+\] Learning rate is (\S+)"},
+            {"Name": "validation:loss", "Regex": r"Epoch\[\d+\] Evaluation metric 'validation_epoch_loss'=(\S+)"},
             {"Name": "test:abs_error", "Regex": r"gluonts\[metric-abs_error\]: (\S+)"},
             {"Name": "test:rmse", "Regex": r"gluonts\[metric-RMSE\]: (\S+)"},
             {"Name": "test:mase", "Regex": r"gluonts\[metric-MASE\]: (\S+)"},
