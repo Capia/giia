@@ -19,6 +19,8 @@ def marshal_candle_metadata(df: DataFrame, drop_date_column=False) -> DataFrame:
     # df = df.round(2)
 
     # df['log_return_close'] = np.log(df['close']).diff()
+    df['roc'] = ta.ROC(df['close'].values)
+    df['roc'] = df['roc'] * 1e6
 
     # These features are easier to manipulate with an integer index, so we add them before setting the time-series index
     # df = add_technical_indicator_features(df)

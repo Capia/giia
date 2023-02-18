@@ -21,46 +21,20 @@ class Parse:
 
     def create_train_test_dataset(self, dataset_dir_path: Path, filedataset_based=True, one_dim_target=True,
                                   starting_date_truncate=None):
-        # First prime the user_data_dir key. This will take priority when merged with config.json
-        freqtrade_config = Configuration({
-            "user_data_dir": config.FREQTRADE_USER_DATA_DIR,
-            "config": [str(config.FREQTRADE_USER_DATA_DIR / "config.json")]
-        })
-        # freqtrade_config = freqtrade_config.from_files([str(config.FREQTRADE_USER_DATA_DIR / "config.json")])
-
-        data_dir = config.FREQTRADE_USER_DATA_DIR / "data" / "kraken"
-        candles = load_pair_history(
-            datadir=data_dir,
-            timeframe=freqtrade_config.get_config()["timeframe"],
-            pair=config.CRYPTO_PAIR)
-
-        if candles.empty:
-            raise ValueError("The candle dataframe is empty. Ensure that you are loading a dataset that has been "
-                             f"downloaded to [{data_dir}]")
-
-        df = mf.marshal_candle_metadata(candles, drop_date_column=True)
-        if starting_date_truncate:
-            df = df[starting_date_truncate:]
-
-        self.logger.log("First sample:")
-        self.logger.log(df.head(1), newline=True)
-        self.logger.log("Last sample:")
-        self.logger.log(df.tail(1), newline=True)
-        self.logger.log(f"Number of raw columns: {len(df.columns)}")
-        self.logger.log(f"Number of rows: {len(df)}")
+        df = self.get_df(starting_date_truncate)
 
         # train = PandasDataset([ts.iloc[:-config.HYPER_PARAMETERS['prediction_length'], :] for ts in df])
         # train = PandasDataset(df.iloc[:-config.HYPER_PARAMETERS['prediction_length'], :])
         train = PandasDataset(
             # df,
             df.iloc[:-config.HYPER_PARAMETERS['prediction_length'], :],
-            target="close",
+            target="roc",
             freq=config.DATASET_FREQ,
             assume_sorted=True
         )
         test = PandasDataset(
             df,
-            target="close",
+            target="roc",
             freq=config.DATASET_FREQ,
             assume_sorted=True
         )
@@ -76,6 +50,35 @@ class Parse:
         self.create_train_test_filedataset(dataset_dir_path, train, test)
         # else:
         #     self.create_train_test_csv(dataset_dir_path, train, test)
+
+    def get_df(self, starting_date_truncate):
+        # First prime the user_data_dir key. This will take priority when merged with config.json
+        freqtrade_config = Configuration({
+            "user_data_dir": config.FREQTRADE_USER_DATA_DIR,
+            "config": [str(config.FREQTRADE_USER_DATA_DIR / "config.json")]
+        })
+        # freqtrade_config = freqtrade_config.from_files([str(config.FREQTRADE_USER_DATA_DIR / "config.json")])
+        data_dir = config.FREQTRADE_USER_DATA_DIR / "data" / "kraken"
+        candles = load_pair_history(
+            datadir=data_dir,
+            timeframe=freqtrade_config.get_config()["timeframe"],
+            pair=config.CRYPTO_PAIR)
+        if candles.empty:
+            raise ValueError("The candle dataframe is empty. Ensure that you are loading a dataset that has been "
+                             f"downloaded to [{data_dir}]")
+
+        df = mf.marshal_candle_metadata(candles, drop_date_column=True)
+        if starting_date_truncate:
+            df = df[starting_date_truncate:]
+
+        self.logger.log("First sample:")
+        self.logger.log(df.head(1), newline=True)
+        self.logger.log("Last sample:")
+        self.logger.log(df.tail(1), newline=True)
+        self.logger.log(f"Number of raw columns: {len(df.columns)}")
+        self.logger.log(f"Number of rows: {len(df)}")
+
+        return df
 
     def create_train_test_filedataset(self, dataset_dir_path, train_dataset, test_dataset):
         # if one_dim_target:

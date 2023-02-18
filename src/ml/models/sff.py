@@ -13,7 +13,7 @@ from utils.model import ModelBase
 
 class Model(ModelBase):
     def train(self):
-        self._describe_model()
+        ctx = self._describe_env()
 
         dataset_dir_path = Path(self.model_hp.dataset_dir)
         print("Dataset directory and files:")
@@ -41,7 +41,6 @@ class Model(ModelBase):
               f"be larger than the number of samples in the training dataset [{train_stats.max_target_length}] or you "
               f"risk not using the full dataset.")
 
-        ctx = self._get_ctx()
         distr_output = self._get_distr_output()
         num_hidden_dimensions = self._get_hidden_dimensions()
 

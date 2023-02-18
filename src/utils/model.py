@@ -1,11 +1,12 @@
 import json
 import os
+import subprocess
 from typing import Optional
 
 import gluonts
 import mxnet
 from gluonts.mx import GaussianOutput
-from gluonts.mx.distribution import NegativeBinomialOutput, PoissonOutput, StudentTOutput
+from gluonts.mx.distribution import NegativeBinomialOutput, PoissonOutput, StudentTOutput, LaplaceOutput
 from mxnet.runtime import feature_list
 from tap import Tap
 
@@ -19,6 +20,7 @@ class ModelHyperParameters(Tap):
     num_batches_per_epoch: int = config.HYPER_PARAMETERS["num_batches_per_epoch"]
     prediction_length: int = config.HYPER_PARAMETERS["prediction_length"]
     context_length: int = config.HYPER_PARAMETERS["context_length"]
+    model_dim: int = config.HYPER_PARAMETERS["model_dim"]
     num_layers: int = config.HYPER_PARAMETERS["num_layers"]
     num_cells: int = config.HYPER_PARAMETERS["num_cells"]
     n_hidden_layer: int = config.HYPER_PARAMETERS["n_hidden_layer"]
@@ -56,7 +58,7 @@ class ModelBase:
     def train(self):
         raise NotImplementedError
 
-    def _describe_model(self):
+    def _describe_env(self):
         print(f"Using the follow arguments: [{self.model_hp}]")
 
         print(f"The model id is [{config.MODEL_ID}]")
@@ -65,12 +67,31 @@ class ModelBase:
         print(f"The GPU count is [{mxnet.context.num_gpus()}]")
         print(f"{feature_list()}")
 
+        if mxnet.context.num_gpus():
+            ctx = mxnet.gpu()
+            print("Using GPU context")
+            print("nvidia-smi")
+            subprocess.call(['nvidia-smi'])
+            print("nvcc --version")
+            subprocess.call(['nvcc', '--version'])
+        else:
+            ctx = mxnet.cpu()
+            print("Using CPU context")
+        return ctx
+
     def _get_distr_output(self):
         # TODO: Determine the correct distribution method. This article goes over some of the key differences
         # https://www.investopedia.com/articles/06/probabilitydistribution.asp
 
         if self.model_hp.distr_output == "NegativeBinomialOutput":
             distr_output = NegativeBinomialOutput()
+        elif self.model_hp.distr_output == "LaplaceOutput":
+            # mu and b were calculated using the `data_analysis.ipynb` notebook. Scaled 1e6 since Laplace requires ints
+            mu = 2583.944875208898
+            b = 210902.5037230011
+
+            distr_output = LaplaceOutput()
+            distr_output.args_dim = {"mu": round(mu), "b": round(b)}
         elif self.model_hp.distr_output == "PoissonOutput":
             distr_output = PoissonOutput()
         elif self.model_hp.distr_output == "GaussianOutput":
@@ -90,16 +111,6 @@ class ModelBase:
 
         print(f"num_hidden_dimensions=[{num_hidden_dimensions}]")
         return num_hidden_dimensions
-
-    @staticmethod
-    def _get_ctx():
-        if mxnet.context.num_gpus():
-            ctx = mxnet.gpu()
-            print("Using GPU context")
-        else:
-            ctx = mxnet.cpu()
-            print("Using CPU context")
-        return ctx
 
     @staticmethod
     def _print_metrics(agg_metrics, item_metrics, metadata):
