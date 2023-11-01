@@ -17,7 +17,7 @@ from pathlib import Path
 from gluonts.dataset.field_names import FieldName
 from gluonts.dataset.split import OffsetSplitter
 from gluonts.dataset.stat import calculate_dataset_statistics
-from gluonts.model.deepar import DeepAREstimator
+from gluonts.mx.model.deepar import DeepAREstimator
 from gluonts.evaluation.backtest import backtest_metrics
 from gluonts.evaluation import Evaluator
 from gluonts.model.predictor import Predictor

@@ -14,13 +14,18 @@ NATURAL_VOLUME_BREAKS = [0.0, 604.22808, 1263.66949, 2312.48193, 4048.12917, 724
 #                          2189.231502, 3517.888325, 8277.1723]
 
 
-def marshal_candle_metadata(df: DataFrame, drop_date_column=False) -> DataFrame:
+def marshal_candle_metadata(df: DataFrame, starting_date_truncate, drop_date_column=False) -> DataFrame:
+    # df["pair"] = "ETH/USDC"
+
+    if starting_date_truncate:
+        df = df[lambda x: x.date > starting_date_truncate]
+
     # This should be first as all subsequent feature engineering should be based on the round number
     # df = df.round(2)
 
     # df['log_return_close'] = np.log(df['close']).diff()
-    df['roc'] = ta.ROC(df['close'].values)
-    df['roc'] = df['roc'] * 1e6
+    # df['roc'] = ta.ROC(df['close'].values)
+    # df['roc'] = df['roc'] * 1e6
 
     # These features are easier to manipulate with an integer index, so we add them before setting the time-series index
     # df = add_technical_indicator_features(df)
@@ -29,11 +34,16 @@ def marshal_candle_metadata(df: DataFrame, drop_date_column=False) -> DataFrame:
     # longest warm up period for the given indicators is 33
     # df = df.iloc[33:]
 
-    # Index by datetime
-    df = df.set_index('date', drop=drop_date_column)
+    # df = df.reindex()
+    # df = df.reset_index(drop=True)
+    # df["time_idx"] = df.index
 
-    # Then remove UTC timezone since GluonTS does not work with it
-    df.index = df.index.tz_localize(None)
+    # Index by datetime
+    # df["date"] = pd.to_datetime(df['date'])
+    # df = df.set_index('date', drop=True)
+    #
+    # # Then remove UTC timezone since GluonTS does not work with it
+    # df.index = df.index.tz_localize(None)
 
     return df
 

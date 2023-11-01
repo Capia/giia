@@ -22,19 +22,22 @@ class Parse:
     def create_train_test_dataset(self, dataset_dir_path: Path, filedataset_based=True, one_dim_target=True,
                                   starting_date_truncate=None):
         df = self.get_df(starting_date_truncate)
+        feature_columns = gh.get_feature_columns(df)
+        print(f"Feature columns: {feature_columns}")
 
         # train = PandasDataset([ts.iloc[:-config.HYPER_PARAMETERS['prediction_length'], :] for ts in df])
         # train = PandasDataset(df.iloc[:-config.HYPER_PARAMETERS['prediction_length'], :])
         train = PandasDataset(
-            # df,
             df.iloc[:-config.HYPER_PARAMETERS['prediction_length'], :],
-            target="roc",
+            target="close",
+            feat_dynamic_real=feature_columns,
             freq=config.DATASET_FREQ,
             assume_sorted=True
         )
         test = PandasDataset(
             df,
-            target="roc",
+            target="close",
+            feat_dynamic_real=feature_columns,
             freq=config.DATASET_FREQ,
             assume_sorted=True
         )
@@ -92,7 +95,7 @@ class Parse:
         #     feature_columns = gh.get_feature_columns(train_df, exclude_close=False)
         #     self.logger.log(f"Number of feature columns: {len(feature_columns)}")
         #
-        #     train_dataset = gh.df_to_multivariate_target_dataset(train_df, feature_columns)
+            # train_dataset = gh.df_to_multivariate_target_dataset(train_df, feature_columns)
         #     test_dataset = gh.df_to_multivariate_target_dataset(test_df, feature_columns)
 
         datasets = gh.build_train_datasets(train_dataset, test_dataset)

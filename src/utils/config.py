@@ -2,8 +2,8 @@
 from pathlib import Path
 
 MODEL_NAME = "giia"
-MODEL_TYPE = "transformer"
-MODEL_VERSION = "1.1.2"
+MODEL_TYPE = "tft"
+MODEL_VERSION = "1.2.0"
 MODEL_ID = f"{MODEL_NAME}-{MODEL_TYPE}-{MODEL_VERSION}"
 
 SM_ROLE = 'arn:aws:iam::941048668662:role/service-role/AmazonSageMaker-ExecutionRole-20191206T145896'
@@ -28,7 +28,7 @@ CRYPTO_PAIR = "ETH/USDT"
 # If you permanently update these values, then you should also update the MODEL_VERSION
 # https://docs.aws.amazon.com/sagemaker/latest/dg/deepar_hyperparameters.html
 _PROD_HYPER_PARAMETERS = {
-    'epochs': 20,
+    'epochs': 3,
     'batch_size': 64,
     'num_batches_per_epoch': 500,
     'prediction_length': 5,
@@ -37,7 +37,11 @@ _PROD_HYPER_PARAMETERS = {
     # Also, this significantly increases memory usage. Beware
     'context_length': 60,
 
-    'model_dim': 512,
+    'num_heads': 32,
+    'hidden_dim': 256,
+    'variable_dim': 256,
+
+    'model_dim': 2048,
     'num_layers': 8,
     'num_cells': 256,
 
@@ -60,11 +64,15 @@ _PROD_HYPER_PARAMETERS = {
 # these HPs can be used to get a general idea of how well the model may perform with PROD HPs, without the longer
 # wait time
 _MODERATE_HYPER_PARAMETERS = {
-    'epochs': 3,
+    'epochs': 5,
     'batch_size': 32,
     'num_batches_per_epoch': 200,
     'prediction_length': 5,
     'context_length': 30,
+
+    'num_heads': 4,
+    'hidden_dim': 32,
+    'variable_dim': 32,
 
     'model_dim': 256,
     'num_layers': 6,
@@ -72,7 +80,7 @@ _MODERATE_HYPER_PARAMETERS = {
 
     'n_hidden_layer': 8,
     'n_neurons_per_layer': 512,
-    'distr_output': "LaplaceOutput",
+    'distr_output': "StudentTOutput",
 
     'skip_size': 4,
     'ar_window': 8,
@@ -94,6 +102,10 @@ _SIMPLE_HYPER_PARAMETERS = {
     'prediction_length': 5,
     'context_length': 10,
 
+    'num_heads': 2,
+    'hidden_dim': 16,
+    'variable_dim': 16,
+
     'model_dim': 16,
     'num_layers': 1,
     'num_cells': 20,
@@ -114,5 +126,5 @@ _SIMPLE_HYPER_PARAMETERS = {
 }
 
 # HYPER_PARAMETERS = _PROD_HYPER_PARAMETERS
-HYPER_PARAMETERS = _MODERATE_HYPER_PARAMETERS
-# HYPER_PARAMETERS = _SIMPLE_HYPER_PARAMETERS
+# HYPER_PARAMETERS = _MODERATE_HYPER_PARAMETERS
+HYPER_PARAMETERS = _SIMPLE_HYPER_PARAMETERS

@@ -55,8 +55,7 @@ class AWSHandler:
             ]
         else:
             train_dataset_files = [
-                config.TRAIN_CSV_FILENAME,
-                config.TEST_CSV_FILENAME
+                config.TRAIN_CSV_FILENAME
             ]
 
         for file in train_dataset_files:

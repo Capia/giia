@@ -1,13 +1,12 @@
 import json
 import os
 import subprocess
+from pathlib import Path
 from typing import Optional
 
 import gluonts
-import mxnet
-from gluonts.mx import GaussianOutput
-from gluonts.mx.distribution import NegativeBinomialOutput, PoissonOutput, StudentTOutput, LaplaceOutput
-from mxnet.runtime import feature_list
+import pandas as pd
+import torch
 from tap import Tap
 
 from utils import config
@@ -47,10 +46,10 @@ class ModelHyperParameters(Tap):
             self.model_dir = os.environ['SM_MODEL_DIR']
 
 
-class ModelBase:
+class ModelTorchBase:
     """
-    Wrapper class with useful methods for all models. This class should not be instantiated directly. Instead, use one
-    of the subclasses in `src/ml/models/`. They all inherit from this class and override the `train` method.
+    Wrapper class with useful methods for all torch models. This class should not be instantiated directly. Instead,
+    use one of the subclasses in `src/ml/models/`. They all inherit from this class and override the `train` method.
     """
 
     model_hp = None
@@ -61,46 +60,28 @@ class ModelBase:
     def train(self):
         raise NotImplementedError
 
+    def _get_model_id(self):
+        return config.MODEL_ID
+
     def _describe_env(self):
         print(f"Using the follow arguments: [{self.model_hp}]")
 
         print(f"The model id is [{config.MODEL_ID}]")
-        print(f"The MXNet version is [{mxnet.__version__}]")
+        print(f"The PyTorch version is [{torch.__version__}]")
         print(f"The GluonTS version is [{gluonts.__version__}]")
-        print(f"The GPU count is [{mxnet.context.num_gpus()}]")
-        print(f"{feature_list()}")
+        print(f"The GPU count is [{torch.cuda.device_count()}]")
 
-        if mxnet.context.num_gpus():
-            ctx = mxnet.gpu()
+        device = 'gpu' if torch.cuda.is_available() else 'cpu'
+        if torch.cuda.is_available():
             print("Using GPU context")
             print("nvidia-smi")
             subprocess.call(['nvidia-smi'])
             print("nvcc --version")
             subprocess.call(['nvcc', '--version'])
         else:
-            ctx = mxnet.cpu()
             print("Using CPU context")
-        return ctx
 
-    def _get_distr_output(self):
-        # TODO: Determine the correct distribution method. This article goes over some of the key differences
-        # https://www.investopedia.com/articles/06/probabilitydistribution.asp
-
-        if self.model_hp.distr_output == "NegativeBinomialOutput":
-            distr_output = NegativeBinomialOutput()
-        elif self.model_hp.distr_output == "LaplaceOutput":
-            distr_output = LaplaceOutput()
-        elif self.model_hp.distr_output == "PoissonOutput":
-            distr_output = PoissonOutput()
-        elif self.model_hp.distr_output == "GaussianOutput":
-            distr_output = GaussianOutput()
-        elif self.model_hp.distr_output == "StudentTOutput":
-            distr_output = StudentTOutput()
-        else:
-            raise ValueError(f"[{self.model_hp.distr_output}] is not a valid choice")
-
-        print(f"Using distr_output [{type(distr_output).__name__}]")
-        return distr_output
+        return device
 
     def _get_hidden_dimensions(self):
         n_hidden_layer = self.model_hp.n_hidden_layer
@@ -117,3 +98,16 @@ class ModelBase:
                 del agg_metrics[key]
         print("Aggregated performance")
         print(json.dumps(agg_metrics, indent=4))
+
+    @staticmethod
+    def _get_df_from_dataset_file(dataset_path: Path):
+        df = pd.read_csv(filepath_or_buffer=dataset_path / config.TRAIN_CSV_FILENAME, header=0, index_col=0)
+
+        print(f"First {dataset_path} sample:")
+        print(df.head(1))
+        print(f"\nLast {dataset_path} sample:")
+        print(df.tail(1))
+        print(df.describe())
+
+        return df
+

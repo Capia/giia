@@ -89,8 +89,14 @@ class Tune:
 
     def _get_manual_hyperparameters(self):
         return {
-            'n_hidden_layer': IntegerParameter(10, 25),
-            'n_neurons_per_layer': IntegerParameter(100, 600),
+            'num_heads': CategoricalParameter([8, 16, 32, 64]),
+            'hidden_dim': CategoricalParameter([64, 128, 192, 256]),
+            'variable_dim': CategoricalParameter([64, 128, 192, 256]),
+
+            'model_dim': CategoricalParameter([512, 1024, 1536, 2048]),
+
+            # 'n_hidden_layer': IntegerParameter(10, 25),
+            # 'n_neurons_per_layer': IntegerParameter(100, 600),
             # 'distr_output': CategoricalParameter([
             #     "NegativeBinomialOutput",
             #     "PoissonOutput",

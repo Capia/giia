@@ -14,12 +14,23 @@ tqdm==4.64.1
 nbstripout==0.6.1
 typed-argument-parser==1.7.2
 
-gluonts==0.12.1
+# gluonts[mxnet,pro]==0.12.3
+# gluonts[torch,pro]==0.12.3
+# gluonts==0.12.3
 # git+https://github.com/awslabs/gluon-ts@master#egg=gluonts
 # git+https://github.com/unibeck/gluon-ts@multivariate_load_datasets#egg=gluonts
 
 ## Note: the packages below need to be installed manually. However, the versions provided here are the
 ## recommended version to install. KEEP THEM UPDATED
+
+torch==1.12.1
+
+# Do I need this while using darts?
+pytorch-lightning==1.9.4
+
+tensorboard==2.12.0
+darts==0.23.1
+# pytorch-forecasting==0.10.3
 
 # mxnet==1.9.0
 ## cu112 as sagemaker gpu image uses CUDA 11.2 (https://pypi.org/project/mxnet-cu112/)

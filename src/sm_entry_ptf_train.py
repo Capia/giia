@@ -13,7 +13,7 @@ from utils.model_torch import ModelHyperParameters, ModelTorchBase
 
 # Based on gluonts.shell.serve
 def model_type_by_name(name: str) -> Type[ModelTorchBase]:
-    model_module = pydoc.locate(f"ml.models.{name}")
+    model_module = pydoc.locate(f"ml.ptf_models.{name}")
 
     if model_module is None:
         raise ValueError(f"Cannot locate model with classname [{name}]")

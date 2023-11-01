@@ -61,6 +61,12 @@ To train locally:
 python -m sm_entry_train --dataset_dir ../out/datasets --model_dir ../out/local_cli/model
 ```
 
+And to view the tensorboard:
+```bash
+export TENSORBOARD_LOG_DIR=./out/local_cli/model/giia-tft-1.2.0                                 
+tensorboard --logdir ${TENSORBOARD_LOG_DIR}
+```
+
 ### Training in AWS
 This repo makes use of AWS Sagemaker's SDK which allows you to test and iterate quickly on your dev machine, before 
 running a training session. To enable local execution change the `train_instance_type` of your estimator to `local`. 
